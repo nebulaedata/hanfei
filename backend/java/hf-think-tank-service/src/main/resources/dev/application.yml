@@ -1,0 +1,127 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.0.240:9301/hf_db_ai?characterEncoding=UTF-8&useSSL=false&serverTimezone=CTT&allowMultiQueries=true
+    username: root
+    password: root123
+#    url: jdbc:mysql://192.168.1.3:3306/hf_db_ai?characterEncoding=UTF-8&useSSL=false&serverTimezone=CTT&allowMultiQueries=true
+#    username: root
+#    password: 123456
+    druid:
+      validation-query: select 1
+  redis:
+    host: 192.168.0.240
+    password: root123
+#    host: 192.168.1.3
+    port: 6379
+    timeout: 20000
+    jedis:
+      pool:
+        max-active: 50
+        max-idle: 50
+        min-idle: 10
+        max-wait: 2000
+        time-between-eviction-runs: 60000
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  rabbitmq:
+    addresses: 114.215.196.235
+    port: 5672
+    username: guest
+    password: guest
+  servlet:
+    multipart:
+      max-file-size: 5000MB
+      max-request-size: 5000MB
+  main:
+    allow-bean-definition-overriding: true
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.yinww.demo.springboot2.demo006.domain
+logging:
+  pattern:
+    console: "[%thread] %-5level %logger{36} - %msg%n"
+server:
+  port: 9999
+  servlet:
+    session:
+      timeout: 3600
+flowable:
+  async-executor-activate: false
+doc-frame-service:
+  env-name: dev
+  # 域名
+  host-name: hanai
+
+  # 路径注意大小写
+  upload-path: /application/han_ai/resource/doc
+  #  download-path: D:\file\download\
+  file-pdf-save-path: /application/han_ai/resource/pdf
+
+  #  项目路径
+  project-file-path: /application/han_ai/resource/projectFile
+  #  上传文件解析暂存路径
+  doc2html-path: /application/han_ai/resource/html
+  #  上传文件解析暂存路径
+  docUnzip-path: /application/han_ai/resource/unzip
+  #  公司信息路径
+  company-path: /application/han_ai/resource/company
+  #  头像路径
+  headImg-path: /application/han_ai/resource/headImg
+  #  文章内图片存放路径
+  pic-path: /application/han_ai/resource/docImg
+  #  静态资源访问的地址
+  static-resource-path:
+  #  参数资源存放路径
+  annex-path: /application/han_ai/resource/annex
+  #  段落对比路径
+  compare-path: /application/han_ai/resource/compare
+  compare-path-local: /application/han_ai/resource/compare
+  #  文档下载路径
+  download-path: /application/han_ai/resource/download
+  #  批次文件路径
+  batch-file-path: /application/han_ai/resource/batchFile
+  #  工具系统同步文件路径
+  upload-json-path: /application/han_ai/resource/upload_json_path
+  #  数据管理-上传excel文件
+  upload-dm-data-path: /application/han_ai/resource/upload_dm_excel_path
+  #  上传视频教程文件
+  teach-video-path: /application/han_ai/resource/upload_video_path
+  #  pdflicense
+  pdf-license-path: /application/han_ai/resource/license/License.xml
+  #  上传模板
+  upload-model-path: /application/han_ai/resource/upload_model_path
+
+# 外部端口调用
+do-post:
+  #  dfb-url: http://192.168.0.114:8012
+  dfb-url: http://dfb.nebulaedata.cn
+
+# 分库分表
+split-database:
+  # 存储文内数据管理的data  (拆分hf_dm_content_data)
+  dm-content-data: hf_db_ai_dmdata
+
+# 登录加密
+rsa-key:
+  publicKey: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCGTjSWXUYnY5+83frmoDd0LVs4+9YenBD9Ll+SGnXWPsSnmDmSHG84w7buzJTVbkfXEVX6XrpS+MsVUKT9NZ7ElRP8O1jeNaEoQDTThuAQ8x58mb8lf1nT4hyquOS81AXw8+mlWeRfJMst5/OMwPgux8BpOvF0TqvrSu03/NtMkwIDAQAB
+  privateKey: MIICXAIBAAKBgQCGTjSWXUYnY5+83frmoDd0LVs4+9YenBD9Ll+SGnXWPsSnmDmSHG84w7buzJTVbkfXEVX6XrpS+MsVUKT9NZ7ElRP8O1jeNaEoQDTThuAQ8x58mb8lf1nT4hyquOS81AXw8+mlWeRfJMst5/OMwPgux8BpOvF0TqvrSu03/NtMkwIDAQABAoGAdUiwNasIi3c9VIKJC4NYSdUd93o8twhU8bPgc8c1pj20ICMYC1dXbTvEcW8ofeXLSK3z5it5DOIE/v0ox5JerT4h4wPqN3kR4l5p8qzFjlBtN8kjjwI9KO5rHtDk+ExaG19l4itB9Q4uzLdllkvmETBSKjhxzQ/C4gbnkzCYJKECQQD18/R/ZxeMDaEHjuOV+suJaIXdreuCg+Ynksr7dLmXdDMxHrvntKfyVv8/Vtg8zasthbesoKfHLwysEGx6cCaDAkEAi8qzYHkUwu7Ev1hh29OFgOtZbE0qV3W9AnGEU+C4ceZ3rJLWzAvCaj0PidTUm8zg1oi2AiajQOFQY+07sazksQJAcdFLPAoBI5bLBixhtW4x8oykJkntyqAvSfDsbiE+IZBsgDawzjET51nLFQyjVL/4j0BqF0DhY5OqUZXoHWD48QJATLDNq9WBcFfxlE/2j9UBXvK+wk2rNwQex2JjiGi2h7Y6XXDJanPhGsuY5LLgWQETMF8cCx4LXiK+KbQSla0WYQJBAJKzSrEmcrY3jKkZyr8LI/VLl6M2vJR0hhk8dtqZIMmy2EAmOseFH7dHhNNKcx/c1ap19ArjG12EEwNCgMvUcjI=
+
+# 接口加密传输
+aes:
+  # 秘钥
+  key: fK8hG2b3EerdWvh6
+  # 是否开启request解密
+  request-decrypt: false
+  # 是否开启response加密
+  response-encrypt: false
+
+# protocol 协议
+protocol:
+  http: http

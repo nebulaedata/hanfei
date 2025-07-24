@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nebulaedata.dao.EditToolMapper">
+
+    <select id="checkFolderNameDao" resultType="Integer">
+        select count(1) from (
+        select *
+        from edit_tool_folder
+        where 1=1
+        and folder_name = #{folderName}
+        and is_del = '0'
+        and folder_type = #{type}
+        <if test="createUserId != null">
+            and create_user_id = #{createUserId}
+        </if>
+        <if test="folderParentId != null">
+            and folder_parent_id = #{folderParentId}
+        </if>
+        <if test="folderParentId == null">
+            and folder_parent_id is null
+        </if>
+        <if test="folderId != null">
+            and folder_id != #{folderId}
+        </if>
+        limit 1
+        ) ta
+    </select>
+
+    <insert id="newFolderDao">
+        insert into edit_tool_folder
+        (folder_id,folder_name,folder_parent_id,folder_type,create_user_id)
+        values
+        (#{folderId},#{folderName},#{folderParentId},#{folderType},#{createUserId})
+    </insert>
+
+    <select id="checkFolderEmpty1Dao" resultType="Integer">
+        select count(1) from (
+        select *
+        from edit_tool_folder
+        where folder_parent_id = #{folderId}
+        and is_del = '0'
+        limit 1
+        ) ta
+    </select>
+    <select id="checkFolderEmpty2Dao" resultType="Integer">
+        select count(1) from (
+        select *
+        from docframe_file_index
+        where folder_id = #{folderId}
+        and file_status = '1'
+        limit 1
+        ) ta
+    </select>
+
+    <select id="getFolderKeyListDao" resultType="String">
+        select folder_id
+        from edit_tool_folder
+        where is_del = '0'
+        and folder_id in ('${folderIdListStr}')
+    </select>
+
+    <update id="delFolderDao">
+        update edit_tool_folder
+        set is_del = '1'
+        where folder_id in ('${folderKeyListDaoTotalStr}')
+    </update>
+    <update id="delDocumentDao">
+        update docframe_file_index
+        set file_status = '3'
+        where (file_uuid in ('${documentKeyListStr}') or (folder_id in ('${folderKeyListDaoTotalStr}')))
+    </update>
+    <update id="delUploadModelFileDao">
+        update hf_upload_model_file
+        set is_del = '1'
+        where (file_uuid in ('${documentKeyListStr}') or (folder_id in ('${folderKeyListDaoTotalStr}')))
+    </update>
+
+    <select id="getFolderInfoDao" resultType="cn.nebulaedata.pojo.EditToolFolderPojo">
+        select ta.*,ta.folder_id `key`,'folder' `type`,tb.user_name createUserName, '.folder' extension, '文件夹' fileTypeNameShow
+        from edit_tool_folder ta
+        left join docframe_user tb
+        on ta.create_user_id = tb.user_id
+        where ta.folder_id = #{folderId}
+        and ta.is_del = '0'
+    </select>
+
+    <select id="getDocumentInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select te.file_type_name ,ta.*,ta.file_uuid `key`,'file' `type`,tb.is_finish,td.user_name create_user_name,
+        case when ta.file_class !='1' and tb.is_finish = '0' then '编制中'
+        when ta.file_class !='1' and tb.is_finish = '1' then '已提交'
+        when ta.file_class='1' and tc.file_uuid is null then '已发布'
+        when ta.file_class='1' and tc.file_uuid is not null then '草稿'
+        else '' end as showStatus,
+        tb.file_version_name,
+        te.file_type_workflow,
+        case when te.file_type_workflow = 'template' then '模板'
+        else '文件' end as fileTypeNameShow,
+        case when te.file_type_workflow = 'template' then '.hfm'
+        else '.hff' end as extension
+        from docframe_file_index ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid=tb.file_uuid
+        and ta.file_version_id=tb.file_version_id
+        left join docframe_file_version_index tc
+        on ta.file_uuid=tc.file_uuid
+        and tc.is_draft='1'
+        left join docframe_user td
+        on ta.create_user_id = td.user_id
+        left join hf_file_type_di te
+        on ta.file_type_id = te.file_type_id
+        where ta.file_status='1'
+        and ta.main_file_uuid is null
+        and ta.main_file_uuid2 is null
+        <!--        and (ta.create_user_id=#{userId} or ta.include_user_list like '%${userId}%')-->
+<!--        and ta.file_class != '0'-->
+        and ta.file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getUploadModelFileInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*,tb.user_name createUserName,ta.extension fileTypeNameShow
+        from hf_upload_model_file ta
+        left join docframe_user tb
+        on ta.create_user_id = tb.user_id
+        where ta.is_del = '0'
+        and ta.file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getAllFolderDao" resultType="cn.nebulaedata.pojo.EditToolFolderPojo">
+        select ta.folder_id,ta.folder_parent_id,ta.folder_name
+        from edit_tool_folder ta
+        where ta.is_del = '0'
+    </select>
+
+    <select id="getFolderNameListByParentFolderIdDao" resultType="String">
+        select  distinct  folder_name
+        from edit_tool_folder
+        where 1=1
+          <if test="folderId == null">
+              and folder_parent_id is null
+          </if>
+          <if test="folderId != null">
+              and folder_parent_id = #{folderId}
+          </if>
+    </select>
+    
+    <select id="getFolderNameListByFolderIdDao" resultType="String">
+        select distinct folder_name
+        from edit_tool_folder
+        where 1=1
+        and folder_id in (
+        <foreach collection="keyList" separator=" , " item="key">
+            #{key}
+        </foreach>
+            )
+    </select>
+
+    <update id="renameFolderDao">
+        update edit_tool_folder
+        set folder_name = #{folderName}
+        where folder_id = #{folderId}
+    </update>
+    <update id="renameDocumentDao">
+        update docframe_file_index
+        set file_name = #{fileName}
+        where file_uuid = #{fileUuid}
+    </update>
+    <update id="renameUploadModelFileDao">
+        update hf_upload_model_file
+        set file_name = #{fileName}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <update id="moveFolderDao">
+        update edit_tool_folder
+        <if test="folderId != null">
+            set folder_parent_id = #{folderId}
+        </if>
+        <if test="folderId == null">
+            set folder_parent_id = null
+        </if>
+        where folder_id in ('${folderIdListStr}')
+    </update>
+    <update id="moveDocumentDao">
+        update docframe_file_index
+        <if test="folderId != null">
+            set folder_id = #{folderId}
+        </if>
+        <if test="folderId == null">
+            set folder_id = null
+        </if>
+        where file_uuid in ('${folderIdListStr}')
+    </update>
+    <update id="moveUploadModelFileDao">
+        update hf_upload_model_file
+        <if test="folderId != null">
+            set folder_id = #{folderId}
+        </if>
+        <if test="folderId == null">
+            set folder_id = null
+        </if>
+        where file_uuid in ('${folderIdListStr}')
+    </update>
+
+    <select id="getFolderListDao" resultType="cn.nebulaedata.pojo.EditToolFolderPojo">
+        select ta.*,ta.folder_id `key`,ta.folder_name title,'folder' `type`,tb.user_name createUserName, '.folder' extension
+        ,if(cnt is null, true,false) isLeaf
+        <if test="searchLike == null">
+            ,'NormalResult' result
+        </if>
+        <if test="searchLike != null">
+            ,'SearchResult' result
+        </if>
+        from edit_tool_folder ta
+        left join docframe_user tb
+        on ta.create_user_id = tb.user_id
+        left join (
+        select folder_parent_id,count(1) cnt
+        from edit_tool_folder
+        where folder_parent_id is not null
+        and folder_type = #{type}
+        and is_del = '0'
+        <if test="type != 'origin'">
+            and create_user_id = #{userId}
+        </if>
+        group by folder_parent_id
+        ) tc
+        on ta.folder_id = tc.folder_parent_id
+        where 1=1
+        and ta.is_del = '0'
+        <if test="type != 'origin'">
+            and ta.create_user_id = #{userId}
+        </if>
+        and ta.folder_type = #{type}
+        <if test="searchLike == null and folderId != null">
+            and ta.folder_parent_id = #{folderId}
+        </if>
+        <if test="searchLike == null and folderId == null">
+            and ta.folder_parent_id is null
+        </if>
+        <if test="searchLike != null">
+            and ta.folder_name like '%${searchLike}%'
+        </if>
+        <if test="order != null">
+            order by ta.update_time asc
+        </if>
+        <if test="order == null">
+            order by ta.update_time desc
+        </if>
+    </select>
+
+<!--    <select id="getChildrenFolderListDao" resultType="cn.nebulaedata.pojo.EditToolFolderPojo">-->
+<!--        select *-->
+<!--        from edit_tool_folder-->
+<!--        where-->
+<!--        <foreach collection="lists" separator=" or " item="list">-->
+<!--            folder_parent_id = #{list}-->
+<!--        </foreach>-->
+<!--    </select>-->
+
+    <select id="getDocumentListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select te.file_type_name ,ta.*,ta.file_uuid `key`,'file' `type`,tb.is_finish,td.user_name create_user_name,
+        case when ta.file_class !='1' and tb.is_finish = '0' then '编制中'
+        when ta.file_class !='1' and tb.is_finish = '1' then '已提交'
+        when ta.file_class='1' and tc.file_uuid is null then '已发布'
+        when ta.file_class='1' and tc.file_uuid is not null then '草稿'
+        else '' end as showStatus,
+        tb.file_version_name,
+        te.file_type_workflow,
+        case when te.file_type_workflow = 'template' then '.hfm'
+        else '.hff' end as extension
+        <if test="searchLike == null">
+            ,'NormalResult' result
+        </if>
+        <if test="searchLike != null">
+            ,'SearchResult' result
+        </if>
+        from docframe_file_index ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid=tb.file_uuid
+        and ta.file_version_id=tb.file_version_id
+        left join docframe_file_version_index tc
+        on ta.file_uuid=tc.file_uuid
+        and tc.is_draft='1'
+        left join docframe_user td
+        on ta.create_user_id = td.user_id
+        left join hf_file_type_di te
+        on ta.file_type_id = te.file_type_id
+        where ta.file_status='1'
+        and ta.main_file_uuid is null
+        and ta.main_file_uuid2 is null
+        <if test="type != 'origin'">
+            and (ta.create_user_id=#{userId} or ta.include_user_list like '%${userId}%')
+        </if>
+        <if test="type == 'file'">
+            and (ta.file_class = '2' or ta.file_class = '3')
+        </if>
+        <if test="type == 'template'">
+            and (ta.file_class = '1')
+        </if>
+        <if test="type == 'origin'">
+            and (ta.file_class = '0')
+        </if>
+        <if test="searchLike == null and folderId != null">
+            and ta.folder_id = #{folderId}
+        </if>
+        <if test="searchLike == null and folderId == null">
+            and ta.folder_id is null
+        </if>
+        <if test="searchLike != null">
+            and ta.file_name like '%${searchLike}%'
+        </if>
+<!--        <if test="order != null">-->
+<!--            order by ta.update_time asc-->
+<!--        </if>-->
+<!--        <if test="order == null">-->
+<!--            order by ta.update_time desc-->
+<!--        </if>-->
+    </select>
+
+    <select id="getAllFolderListDao" resultType="cn.nebulaedata.pojo.EditToolFolderPojo">
+        select ta.*,ta.folder_id `key`,ta.folder_name title,'folder' `type`,ta.folder_id value,ta.folder_name label
+        from edit_tool_folder ta
+        where ta.is_del = '0'
+          and ta.folder_type = #{type}
+          and ta.create_user_id = #{userId}
+        order by ta.update_time desc
+    </select>
+
+    <select id="getFolderListLVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select folder_id value, folder_name label
+        from edit_tool_folder ta
+        where ta.is_del = '0'
+          and ta.folder_type = 'template'
+          and ta.create_user_id = #{userId}
+          and ta.folder_parent_id is null
+        order by ta.update_time desc
+    </select>
+    <select id="getDocumentListLVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select file_uuid value, file_name label, file_uuid,file_version_id, 'hfDoc' type
+        from docframe_file_index ta
+        where ta.file_status='1'
+          and ta.main_file_uuid is null
+          and ta.main_file_uuid2 is null
+          and ta.file_class = '1'
+          and ta.folder_id = #{folderId}
+        order by ta.update_time desc
+    </select>
+
+    <select id="searchDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*
+        from docframe_file_index ta
+        left join hf_file_type_di tb
+        on ta.file_type_id = tb.file_type_id
+        where 1=1
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+        and file_status = '1'
+        and file_class != '0'
+        <if test="fileNameLike != null">
+            and ta.file_name like '%${fileNameLike}%'
+        </if>
+        <if test="type != null">
+            and tb.file_type_group_name = #{type}
+        </if>
+<!--        <if test="folderId != null">-->
+<!--            and folder_id = #{folderId}-->
+<!--        </if>-->
+    </select>
+
+    <update id="updateFileAssessStatusDao" >
+        update docframe_file_index
+        set assess_status = #{assessStatus}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <select id="getApplicationListDao" resultType="cn.nebulaedata.pojo.HfFileTypeDiPojo">
+        select file_type_id,
+        file_type_name,
+        file_type_workflow,
+        file_type_group_id,
+        file_type_group_name,
+        in_use isUsed,
+        file_type_desc
+        from hf_file_type_di
+        where file_type_group_id = 'MB'
+        <if test="inUse != null">
+            and in_use = '1'
+        </if>
+    </select>
+
+    <update id="changeApplicationStatusDao">
+        update hf_file_type_di
+        set in_use = #{inUse}
+        where file_type_id = #{fileTypeId}
+    </update>
+
+    <select id="getUploadModelFileListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*,
+               ta.file_uuid fileVersionId,
+               'uploadModel' type,
+               tb.user_name createUserName
+        <if test="searchLike == null">
+            ,'NormalResult' result
+        </if>
+        <if test="searchLike != null">
+            ,'SearchResult' result
+        </if>
+        from hf_upload_model_file ta
+        left join docframe_user tb
+        on ta.create_user_id = tb.user_id
+        where 1=1
+          and ta.create_user_id = #{userId}
+          and ta.is_del = '0'
+        <if test="searchLike == null and folderId != null">
+            and ta.folder_id = #{folderId}
+        </if>
+        <if test="searchLike == null and folderId == null">
+            and ta.folder_id is null
+        </if>
+        <if test="searchLike != null">
+            and ta.file_name like '%${searchLike}%'
+        </if>
+<!--        <if test="order != null">-->
+<!--            order by ta.update_time asc-->
+<!--        </if>-->
+<!--        <if test="order == null">-->
+<!--            order by ta.update_time desc-->
+<!--        </if>-->
+    </select>
+    <select id="getUploadModelFileListLVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select file_uuid value, file_name label, file_uuid, file_uuid file_version_id, 'uploadModel' type
+        from hf_upload_model_file
+        where folder_id = #{folderId}
+        and is_del = '0'
+    </select>
+
+    <insert id="addParamsWorkflowDao" parameterType="cn.nebulaedata.pojo.ParamsWorkflowPojo">
+        insert into hf_params_workflow (file_uuid, file_version_id, workflow_json) values (#{fileUuid}, #{fileVersionId}, #{workflowJson})
+    </insert>
+
+    <delete id="deleteParamsWorkflowDao" parameterType="cn.nebulaedata.pojo.ParamsWorkflowPojo">
+        delete from hf_params_workflow
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </delete>
+
+
+    <select id="searchParamsWorkflowDao" resultType="cn.nebulaedata.pojo.ParamsWorkflowPojo"
+            parameterType="cn.nebulaedata.pojo.ParamsWorkflowPojo">
+        select file_uuid, file_version_id, workflow_json from hf_params_workflow
+        <where>
+            <if test="fileUuid != null">
+                and file_uuid = #{fileUuid}
+            </if>
+            <if test="fileVersionId != null">
+                and file_version_id = #{fileVersionId}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateParamsWorkflowDao" parameterType="cn.nebulaedata.pojo.ParamsWorkflowPojo">
+        update hf_params_workflow
+        <if test="workflowJson != null">
+            set workflow_json = #{workflowJson}
+        </if>
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </update>
+
+
+</mapper>

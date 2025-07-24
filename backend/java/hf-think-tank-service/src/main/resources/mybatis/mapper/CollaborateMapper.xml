@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nebulaedata.dao.CollaborateMapper">
+
+    <insert id="createHfRoomDao">
+        insert into hf_room
+        (room_id,file_uuid,file_version_id,room_status,admin_user_id,create_user_id)
+        values
+        (#{roomId},#{fileUuid},#{fileVersionId},#{roomStatus},#{adminUserId},#{createUserId})
+    </insert>
+
+    <select id="getRoomInfoDao" resultType="cn.nebulaedata.pojo.HfRoomPojo">
+        select *
+        from hf_room
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </select>
+
+
+    <insert id="noticeUserDao">
+        insert into hf_auditing_result_notice
+        (auditing_uuid,auditing_content,file_uuid,file_version_id,notice_user_id,notice_type)
+        values
+        (#{auditingUuid},#{auditingContent},#{fileUuid},#{fileVersionId},#{noticeUserId},#{noticeType})
+    </insert>
+
+</mapper>

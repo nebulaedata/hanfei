@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nebulaedata.dao.SplitTableMapper">
+    <insert id="newBidDocumentContentDmDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo1}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        table_id,
+        `order`,
+        #{bidFileIndex.createUserId} create_user_id,
+        #{bidFileIndex.fileUuid} file_uuid,
+        #{bidFileIndex.fileVersionId} file_version_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo2}
+        where 1=1
+        and file_uuid=#{bidFileIndex.oldFileUuid}
+        and file_version_id=#{bidFileIndex.oldFileVersionId}
+    </insert>
+
+    <insert id="newTendContentDmDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo1}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        table_id,
+        `order`,
+        #{docFileIndexPojo.createUserId} create_user_id,
+        #{docFileIndexPojo.fileUuid} file_uuid,
+        #{docFileIndexPojo.fileVersionId} file_version_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo2}
+        where 1=1
+        and file_uuid=#{docFileIndexPojo.oldFileUuid}
+        and file_version_id=#{docFileIndexPojo.oldFileVersionId}
+    </insert>
+
+    <insert id="addDmDataInFileDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        (data_id,data_content,table_id,`order`,file_uuid,file_version_id,create_user_id)
+        values
+        (#{hfDmData.dataId},#{hfDmData.dataContent},#{hfDmData.tableId},#{hfDmData.order},#{hfDmData.fileUuid},#{hfDmData.fileVersionId},#{hfDmData.createUserId})
+    </insert>
+
+    <select id="getNowDataOrderInFileDao" resultType="Integer">
+        select CAST(`order` AS signed) `order`
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where table_id = #{tableId}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        order by CAST(`order` AS signed) desc
+        limit 1
+    </select>
+
+    <delete id="delDmDataInFileDao">
+        delete from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where data_id = #{dataId}
+        and table_id = #{tableId}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </delete>
+
+    <update id="chgDmDataInFileDao">
+        update ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        set data_content = #{hfDmData.dataContent}
+        where data_id = #{hfDmData.dataId}
+        and table_id = #{hfDmData.tableId}
+        and file_uuid = #{hfDmData.fileUuid}
+        and file_version_id = #{hfDmData.fileVersionId}
+    </update>
+
+    <select id="getDmDataListInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        <!--无上卷-->
+        select ta.data_id `key`,ta.*
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo} ta
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.table_id = #{tableId}
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        <if test="sql != null">
+            and (${sql})
+        </if>
+        <if test="sortBySql != null">
+            ${sortBySql}
+        </if>
+        <if test="sortBySql == null">
+            order by cast(ta.`order` as signed) asc, ta.create_time asc
+        </if>
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+    <select id="getDmDataListInFileGroupByDao" resultType="Map">
+        <!--上卷-->
+        select '1' as `key` ,${groupBySqlWithName}  ${groupByFunctionsSql}
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo} ta
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.table_id = #{tableId}
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        <if test="sql != null">
+            and (${sql})
+        </if>
+        <!--        and (${groupBySqlNotNull})-->
+        group by ${groupBySql}
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getTotalKeysDao" resultType="String">
+        select ta.data_id `key`
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo} ta
+        where 1=1
+        and ta.table_id = #{tableId}
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        <if test="sql != null">
+            and (${sql})
+        </if>
+        order by cast(ta.`order` as signed) asc, ta.create_time asc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getNoSortDataInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        select ta.data_id `key`,ta.*
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo} ta
+        where 1=1
+        and ta.table_id = #{tableId}
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        <if test="keyList != null">
+            and ta.data_id in (
+            <foreach collection="keyList" separator=" , " item="columnsId">
+                #{columnsId}
+            </foreach>
+            )
+            limit #{limit}
+        </if>
+    </select>
+
+    <select id="getDmDataTotalInFileDao" resultType="Integer">
+        select count(1)
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where table_id = #{tableId}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        <!--        and create_user_id = #{createUserId}-->
+    </select>
+
+    <insert id="uploadHfDmDataInFileDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        (data_id,data_content,table_id,`order`,file_uuid,file_version_id,create_user_id,create_time)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.dataId},#{list.dataContent},#{list.tableId},#{list.order},#{fileUuid},#{fileVersionId},#{list.createUserId},#{list.createTime})
+        </foreach>
+    </insert>
+
+    <insert id="importDmDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        #{newTableId} table_id,
+        `order`,
+        #{userId} create_user_id,
+        #{fileUuid} file_uuid,
+        #{fileVersionId} file_version_id
+        from hf_dm_data
+        where table_id = #{tableId}
+<!--        and create_user_id = #{userId}-->
+    </insert>
+    <insert id="importOnlyDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        MD5(UUID()) data_id,
+        data_content,
+        #{toTableId} table_id,
+        `order`,
+        #{userId} create_user_id,
+        #{fileUuid} file_uuid,
+        #{fileVersionId} file_version_id
+        from hf_dm_data
+        where table_id = #{fromTableId}
+<!--        and create_user_id = #{userId}-->
+    </insert>
+
+    <delete id="clearTableDataDao">
+        delete from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        and table_id = #{tableId}
+    </delete>
+
+
+
+
+    <insert id="newSubsidiaryContentDmDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo1}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        table_id,
+        `order`,
+        #{docFileIndexPojo.createUserId} create_user_id,
+        #{docFileIndexPojo.fileUuid} file_uuid,
+        #{docFileIndexPojo.fileVersionId} file_version_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where 1=1
+        and file_uuid=#{docFileIndexPojo.mainFileUuid}
+        and file_version_id=#{docFileIndexPojo.oldFileVersionId}
+    </insert>
+
+    <insert id="addDeriveContentDmDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo1}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        table_id,
+        `order`,
+        #{docFileIndexPojo.createUserId} create_user_id,
+        #{docFileIndexPojo.fileUuid} file_uuid,
+        #{docFileIndexPojo.fileVersionId} file_version_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo2}
+        where 1=1
+        and file_uuid=#{docFileIndexPojo.fileParentId}
+        and file_version_id=#{docFileIndexPojo.oldFileVersionId}
+    </insert>
+
+    <insert id="addVersionContentDmDataDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo1}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        table_id,
+        `order`,
+        #{docFileIndexPojo.createUserId} create_user_id,
+        file_uuid,
+        #{docFileIndexPojo.fileVersionId} file_version_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo2}
+        where 1=1
+        and file_uuid=#{docFileIndexPojo.fileParentId}
+        and file_version_id=#{docFileIndexPojo.oldFileVersionId}
+    </insert>
+
+    <select id="getDmDataInFileDao" resultType="cn.nebulaedata.pojo.HfDmContentData">
+        select *
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+        and table_id=#{tableId}
+        and data_id in (
+        <foreach collection="rows" separator=" , " item="row">
+            #{row}
+        </foreach>
+        )
+    </select>
+
+    <select id="getDmDataIdListInFileDao" resultType="String">
+        select ta.data_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo} ta
+        where 1=1
+        and ta.table_id = #{tableId}
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        <if test="sortBySql != null">
+            ${sortBySql}
+        </if>
+        <if test="sortBySql == null">
+            order by cast(ta.`order` as signed) asc, ta.create_time asc
+        </if>
+    </select>
+
+    <update id="orderDmDataInFileDao">
+        ${sql}
+    </update>
+
+    <delete id="clearDmDataInFileDao">
+        delete from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+        and table_id=#{tableId}
+    </delete>
+
+    <insert id="copyDmDataInFileDao">
+        insert into ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)
+        select
+        data_id,
+        data_content,
+        #{newTableId} table_id,
+        `order`,
+        #{userId} create_user_id,
+        file_uuid,
+        file_version_id
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where table_id = #{tableId}
+        and file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+    </insert>
+
+    <select id="getDmDataListByTableIdInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        select table_id,data_id,data_content
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where table_id = #{tableId}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        <if test="dataId != null">
+            and data_id = #{dataId}
+        </if>
+        order by cast(`order` as signed )
+    </select>
+
+    <select id="getDmTableAllDataInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        select table_id,data_id,data_content
+        from ${dmContentDataDatabase}.hf_dm_content_data${DbNo}
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+        and table_id in (
+        <foreach collection="importTableIdList" separator=" , " item="tableId">
+            #{tableId}
+        </foreach>
+            )
+    </select>
+</mapper>
+

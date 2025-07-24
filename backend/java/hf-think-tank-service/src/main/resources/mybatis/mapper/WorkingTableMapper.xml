@@ -1,0 +1,4748 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nebulaedata.dao.WorkingTableMapper">
+
+
+    <resultMap id="getOutlineTreeMap" type="cn.nebulaedata.pojo.OutLinePojo">
+        <result column="outline_father_id" property="outlineFatherId"></result>
+        <collection property="children" column="{outlineId=outline_id,fileUuid=file_uuid,fileVersionId=file_version_id}"
+                    javaType="java.util.List"
+                    ofType="cn.nebulaedata.pojo.OutLinePojo"
+                    select="getOutlineListChildDao"></collection>
+    </resultMap>
+
+    <select id="getOutlineListDao" resultMap="getOutlineTreeMap">
+        select *
+        from hf_model_outline
+        where 1 = 1
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+          and (outline_father_id is null or outline_father_id = '' or outline_father_id = 'null')
+        order by cast(outline_order as SIGNED) asc
+    </select>
+
+    <select id="getOutlineListChildDao" resultMap="getOutlineTreeMap">
+        select *
+        from hf_model_outline
+        where outline_father_id = #{outlineId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+        order by cast(outline_order as SIGNED) asc
+    </select>
+
+    <select id="getOutlineListDao1" resultType="cn.nebulaedata.pojo.OutLinePojo">
+        select *
+        from hf_model_outline
+        where 1 = 1
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+        order by cast(outline_order as SIGNED) asc
+    </select>
+
+
+    <select id="getContentDao" resultType="cn.nebulaedata.pojo.OutLinePojo">
+        select ta.*,tb.content_text
+        from hf_model_outline ta
+        left join hf_model_content tb
+        on ta.outline_id=tb.outline_id
+        and ta.file_uuid=tb.file_uuid
+        and ta.file_version_id=tb.file_version_id
+        and ta.file_uuid=#{fileUuid}
+        and ta.file_version_id=#{fileVersionId}
+        where ta.file_uuid=#{fileUuid}
+        and ta.file_version_id=#{fileVersionId}
+        <if test="outlineId != 'all'">
+            and ta.outline_id=#{outlineId}
+        </if>
+        order by cast(ta.outline_order as SIGNED) asc
+    </select>
+
+    <insert id="addProjectDao">
+        insert into hf_project_space(project_id, project_no, project_name, project_info, project_status, model_id,
+                                     include_user_id, create_user_id, main_person, file_path, project_type,
+                                     project_address, project_budget, project_start_date, project_end_date, has_child,
+                                     create_time)
+        values (#{projectId}, #{projectNo}, #{projectName}, #{projectInfo}, #{projectStatus}, #{modelId},
+                #{includeUserId}, #{createUserId}, #{mainPerson}, #{filePath}, #{projectType}, #{projectAddress},
+                #{projectBudget}, #{projectStartDate}, #{projectEndDate}, #{hasChild}, #{createTime})
+    </insert>
+
+    <select id="checkProjectNameDao" resultType="Integer">
+        select count(1)
+        from hf_project_space
+        where project_name=#{projectName}
+        <if test="projectId != null">
+            and project_id != #{projectId}
+        </if>
+    </select>
+
+    <delete id="delProjectDao">
+        delete
+        from hf_project_space
+        where project_id = #{projectId}
+    </delete>
+
+    <update id="updateProjectDao">
+        update hf_project_space
+        set project_no         = #{projectNo},
+            project_name       = #{projectName},
+            project_info       = #{projectInfo},
+            model_id           = #{modelId},
+            include_user_id    = #{includeUserId},
+            main_person        = #{mainPerson},
+            project_type       = #{projectType},
+            project_address    = #{projectAddress},
+            project_budget     = #{projectBudget},
+            project_start_date = #{projectStartDate},
+            project_end_date   = #{projectEndDate},
+            project_status= #{projectStatus}
+        where project_id = #{projectId}
+    </update>
+
+    <select id="getProjectInfoDao" resultType="cn.nebulaedata.pojo.ProjectPojo">
+        select ta.*,
+               tb.user_name createUserName,
+               tc.user_name mainPersonName
+        from hf_project_space ta
+                 left join docframe_user tb
+                           on ta.create_user_id = tb.user_id
+                 left join docframe_user tc
+                           on ta.main_person = tc.user_id
+        where ta.project_id = #{projectId}
+    </select>
+
+    <select id="getUserListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select user_id value, user_name label
+        from docframe_user
+    </select>
+
+    <select id="getPackageCountDao" resultType="Integer">
+        select count(1)
+        from hf_project_package
+        where project_id = #{projectId}
+    </select>
+
+    <select id="getFileCountDao" resultType="Integer">
+        select count(1)
+        from hf_project_file
+        where project_id = #{projectId}
+    </select>
+
+    <select id="getProjectListDao" resultType="cn.nebulaedata.pojo.ProjectPojo">
+        select ta.*,
+        tb.user_name createUserName,
+        tc.user_name mainPersonName
+        from hf_project_space ta
+        left join docframe_user tb
+        on ta.create_user_id=tb.user_id
+        left join docframe_user tc
+        on ta.main_person=tc.user_id
+        where 1=1
+        <if test="paramNameLike != null">
+            and ta.project_name like '%${paramNameLike}%'
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <insert id="addStageDao">
+        insert into hf_project_stage
+        (stage_id, stage_name, batch_id, project_id, fenbiao_id, model_id, include_user_id, create_user_id, create_time)
+        values (#{stageId}, #{stageName}, #{batchId}, #{projectId}, #{fenbiaoId}, #{modelId}, #{includeUserId},
+                #{createUserId}, #{createTime})
+    </insert>
+
+    <select id="checkStageNameDao" resultType="Integer">
+        select count(1)
+        from hf_project_stage
+        where stage_name = #{stageName}
+    </select>
+
+    <delete id="delStageDao">
+        delete
+        from hf_project_stage
+        where stage_id = #{stageId}
+    </delete>
+
+    <update id="updateStageDao">
+        update hf_project_stage
+        set stage_name      = #{stageName},
+            batch_id        = #{batchId},
+            fenbiao_id      = #{fenbiaoId},
+            model_id        = #{modelId},
+            include_user_id = #{includeUserId}
+        where stage_id = #{stageId}
+    </update>
+
+    <select id="getStageInfoDao" resultType="cn.nebulaedata.pojo.StagePojo">
+        select *
+        from hf_project_stage
+        where stage_id = #{stageId}
+    </select>
+
+    <select id="getStageListDao" resultType="cn.nebulaedata.pojo.StagePojo">
+        select *
+        from hf_project_stage
+        where 1=1
+        and project_id = #{projectId}
+        <if test="paramNameLike != null">
+            and stage_name like '%${paramNameLike}%'
+        </if>
+        order by create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getOptionsDao" resultType="cn.nebulaedata.pojo.OptionsPojo">
+        select *
+        from hf_options_di
+        where 1=1
+        <if test="type != null">
+            and type = #{type}
+        </if>
+        <if test="flag == null">
+            and is_del = '0'
+        </if>
+        order by id
+    </select>
+
+    <insert id="addBatchDao">
+        insert into hf_project_batch
+        (batch_id, batch_name, batch_no, include_user_id, create_user_id, batch_state, batch_property, main_person,
+         batch_manager, project_unit, file_path, create_time)
+        values (#{batchId}, #{batchName}, #{batchNo}, #{includeUserId}, #{createUserId}, #{batchState},
+                #{batchProperty}, #{mainPerson}, #{batchManager}, #{projectUnit}, #{filePath}, #{createTime})
+    </insert>
+
+    <select id="checkBatchNoDao" resultType="Integer">
+        select count(1)
+        from hf_project_batch
+        where batch_no = #{batchNo}
+        <if test="batchId != null">
+            and batch_id != #{batchId}
+        </if>
+    </select>
+
+    <delete id="delBatchDao">
+        delete
+        from hf_project_batch
+        where batch_id = #{batchId}
+    </delete>
+
+    <update id="updateBatchDao">
+        update hf_project_batch
+        set batch_name=#{batchName},
+            batch_no=#{batchNo},
+            include_user_id=#{includeUserId},
+            batch_state=#{batchState},
+            batch_property=#{batchProperty},
+            main_person=#{mainPerson},
+            batch_manager=#{batchManager},
+            project_unit=#{projectUnit}
+        where batch_id = #{batchId}
+    </update>
+
+    <select id="getBatchInfoDao" resultType="cn.nebulaedata.pojo.BatchPojo">
+        select ta.*, tb.user_name mainPersonName
+        from hf_project_batch ta
+                 left join docframe_user tb
+                           on ta.main_person = tb.user_id
+        where batch_id = #{batchId}
+    </select>
+    <select id="getBatchInfoByBatchNoDao" resultType="cn.nebulaedata.pojo.BatchPojo">
+        select ta.*, tb.user_name mainPersonName
+        from hf_project_batch ta
+                 left join docframe_user tb
+                           on ta.main_person = tb.user_id
+        where batch_no = #{batchNo}
+        limit 1
+    </select>
+
+    <select id="getBatchListDao" resultType="cn.nebulaedata.pojo.BatchPojo">
+        select *
+        from hf_project_batch
+        where 1=1
+        <if test="paramNameLike != null">
+            and batch_name like '%${paramNameLike}%'
+        </if>
+        order by create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getProjectListByUserDao" resultType="cn.nebulaedata.pojo.ProjectPojo">
+        select *
+        from hf_project_space
+        where 1 = 1
+    </select>
+
+    <select id="getPackageListByProjectIdListDao" resultType="cn.nebulaedata.pojo.PackagePojo">
+        select *
+        from hf_project_package
+        where 1 = 1
+          and project_id in ('${projectIdListStr}')
+    </select>
+
+    <update id="updateBatchProjectDao">
+        update hf_project_batch
+        set project_stage_list = #{projectStageListStr}
+        where batch_id = #{batchId}
+    </update>
+
+    <update id="updateBatchUserListDao">
+        update hf_project_batch
+        set include_user_id   = #{includeUserIdStr},
+            include_user_info = #{includeUserInfoStr}
+        where batch_id = #{batchId}
+    </update>
+
+    <insert id="addBatchFileDao">
+        insert into hf_project_batch_file
+        (file_uuid, file_name, file_extension, file_info, file_type, batch_id, package_id, project_stage_id,
+         main_person, create_user_id, file_path, is_struct, is_show)
+        values (#{fileUuid}, #{fileName}, #{fileExtension}, #{fileInfo}, #{fileType}, #{batchId}, #{packageId},
+                #{projectStageId}, #{mainPerson}, #{createUserId}, #{filePath}, #{isStruct}, #{isShow})
+    </insert>
+
+    <insert id="addPackageListDao">
+        insert into hf_project_package
+        (project_id, package_id, package_name, package_info, include_user_id, create_user_id, main_person, create_time)
+        values
+            ${sql}
+    </insert>
+
+    <insert id="addPackageDao">
+        <!--        insert into hf_project_package-->
+        <!--        (package_id,package_name,package_info,package_type1,package_type2,package_budget,package_address,package_buy_way,package_start_date,package_finish_date,batch_id,project_id,model_id,include_user_id,create_user_id,main_person,stage_id,create_time)-->
+        <!--        values-->
+        <!--        (#{packageId},#{packageName},#{packageInfo},#{packageType1},#{packageType2},#{packageBudget},#{packageAddress},#{packageBuyWay},#{packageStartDate},#{packageFinishDate},#{batchId},#{projectId},#{modelId},#{includeUserId},#{createUserId},#{mainPerson},#{stageId},#{createTime})-->
+        insert into hf_project_package
+        (project_id,package_id,package_name,package_info,include_user_id,create_user_id,main_person,create_time)
+        values
+        (#{projectId},#{packageId},#{packageName},#{packageInfo},#{includeUserId},#{createUserId},#{mainPerson},#{createTime})
+    </insert>
+
+    <select id="checkPackageNameDao" resultType="Integer">
+        select count(1)
+        from hf_project_package
+        where 1=1
+        and package_name = #{packageName}
+        <!--        and batch_id = #{batchId}-->
+        <if test="packageId != null">
+            and package_id != #{packageId}
+        </if>
+    </select>
+
+    <select id="checkFileNameDao" resultType="Integer">
+        select count(1)
+        from hf_project_file
+        where 1=1
+        and file_name=#{fileName}
+        <if test="fileUuid != null">
+            and file_uuid != #{fileUuid}
+        </if>
+        <if test="projectId != null">
+            and project_id = #{projectId}
+        </if>
+    </select>
+
+    <select id="getPackageListSizeDao" resultType="Integer">
+        select count(1)
+        from hf_project_package
+        where project_id = #{projectId}
+    </select>
+
+    <delete id="delPackageDao">
+        delete
+        from hf_project_package
+        where package_id = #{packageId}
+    </delete>
+
+    <update id="updatePackageDao">
+        update hf_project_package
+        set package_name        = #{packageName},
+            package_info        = #{packageInfo},
+            package_type1       = #{packageType1},
+            package_type2       = #{packageType2},
+            package_budget      = #{packageBudget},
+            package_address     = #{packageAddress},
+            package_buy_way     = #{packageBuyWay},
+            package_start_date  = #{packageStartDate},
+            package_finish_date = #{packageFinishDate},
+            batch_id            = #{batchId},
+            project_id          = #{projectId},
+            model_id            = #{modelId},
+            include_user_id     = #{includeUserId},
+            stage_id            = #{stageId}
+        where package_id = #{packageId}
+    </update>
+
+    <select id="getPackageInfoDao" resultType="cn.nebulaedata.pojo.PackagePojo">
+        select ta.*,
+               tb.user_name createUserName,
+               tc.user_name mainPersonName,
+               td.project_name
+        from hf_project_package ta
+                 left join docframe_user tb
+                           on ta.create_user_id = tb.user_id
+                 left join docframe_user tc
+                           on ta.main_person = tc.user_id
+                 left join hf_project_space td
+                           on ta.project_id = td.project_id
+        where package_id = #{packageId}
+    </select>
+
+    <select id="getPackageListDao" resultType="cn.nebulaedata.pojo.PackagePojo">
+        select ta.*,tb.user_name mainPersonName
+        from hf_project_package ta
+        left join docframe_user tb
+        on ta.main_person=tb.user_id
+        where 1=1
+        and ta.project_id=#{projectId}
+        <if test="paramNameLike != null">
+            and ta.package_name like '%${paramNameLike}%'
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+    <select id="getPackageNameListDao" resultType="String">
+        select package_name
+        from hf_project_package
+        where 1 = 1
+          and project_id = #{projectId}
+    </select>
+
+    <!--    <select id="getBidDocumentListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">-->
+    <!--        select ta.file_uuid value,ta.file_name label-->
+    <!--        from docframe_file_index ta-->
+    <!--        left join hf_project_file tb-->
+    <!--        on ta.file_uuid=tb.file_uuid-->
+    <!--        and tb.is_struct='1'-->
+    <!--        where tb.file_uuid is null-->
+    <!--        and file_type_id in ('Z','T')-->
+    <!--        and ta.file_status='1'-->
+    <!--    </select>-->
+    <select id="getBidDocumentListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*
+        from docframe_file_index ta
+                 left join hf_project_file tb
+                           on ta.file_uuid = tb.file_uuid
+                               and tb.is_struct = '1'
+        where tb.file_uuid is null
+          and file_type_id in ('WJ-ZBWJ', 'WJ-TBWJ')
+          and ta.file_status = '1'
+    </select>
+
+    <insert id="addProjectFileDao">
+        insert into hf_project_file
+        (file_uuid, file_name, file_extension, file_info, file_type, project_id, package_id, main_person,
+         create_user_id, file_path, is_struct, is_show, create_time)
+        values (#{fileUuid}, #{fileName}, #{fileExtension}, #{fileInfo}, #{fileType}, #{projectId}, #{packageId},
+                #{mainPerson}, #{createUserId}, #{filePath}, #{isStruct}, #{isShow}, #{createTime})
+    </insert>
+
+    <update id="updateFileStatusDao">
+        update docframe_file_index
+        set file_status=#{fileStatus}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <update id="updateFileStatusDao2">
+        update docframe_file_index
+        set file_status=#{fileStatus}
+        where file_uuid in ('${fileUuidListStr}')
+    </update>
+
+    <update id="updateProjectShowDao">
+        update hf_project_file
+        set is_show=#{isShow}
+        where file_uuid in ('${fileUuidListStr}')
+    </update>
+
+    <update id="updateBatchShowDao">
+        update hf_project_batch_file
+        set is_show=#{isShow}
+        where file_uuid in ('${fileUuidListStr}')
+    </update>
+
+    <delete id="delProjectFileDao">
+        delete
+        from hf_project_file
+        where file_uuid = #{fileUuid}
+    </delete>
+    <delete id="delBatchFileDao">
+        delete
+        from hf_project_batch_file
+        where file_uuid = #{fileUuid}
+    </delete>
+
+    <update id="updateProjectFileDao">
+        update hf_project_file
+        set stage_id=#{stageId}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <update id="updateBatchFileDao">
+        update hf_project_batch_file
+        set project_stage_id = #{projectStageId}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <update id="updateFilePropertyDao">
+        update hf_project_file
+        set file_name=#{fileName},
+        file_type=#{fileType},
+        package_id=#{packageId},
+        <!--        main_person=#{mainPerson},-->
+        <!--        file_info=#{fileInfo},-->
+        file_path=#{filePath}
+        where file_uuid=#{fileUuid}
+    </update>
+
+    <select id="getProjectFileInfoDao" resultType="cn.nebulaedata.pojo.ProjectFilePojo">
+        select *
+        from hf_project_file
+        where file_uuid = #{fileUuid}
+    </select>
+    <select id="getBatchFileInfoDao" resultType="cn.nebulaedata.pojo.BatchFilePojo">
+        select ta.*,
+               tb.batch_name,
+               tb.batch_no,
+               tc.user_name mainPersonName
+        from hf_project_batch_file ta
+                 left join hf_project_batch tb
+                           on ta.batch_id = tb.batch_id
+                 left join docframe_user tc
+                           on ta.create_user_id = tc.user_id
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getProjectFileListDao" resultType="cn.nebulaedata.pojo.ProjectFilePojo">
+        select ta.*,
+        tb.user_name mainPersonName,
+        tc.package_name packageName,
+        td.user_name createUserName,
+        te.file_type_name FileTypeName
+        from hf_project_file ta
+        left join docframe_user tb
+        on ta.main_person=tb.user_id
+        left join hf_project_package tc
+        on ta.package_id=tc.package_id
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        left join hf_file_type_di te
+        on ta.file_type=te.file_type_id
+        where 1=1
+        and ta.is_show = '1'
+        and ta.project_id=#{projectId}
+        <if test="paramNameLike != null">
+            and ta.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="packageId != null">
+            and ta.package_id = #{packageId}
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getBatchFileListDao" resultType="cn.nebulaedata.pojo.BatchFilePojo">
+        select ta.*,
+        tb.batch_name,
+        tb.batch_no,
+        tc.user_name create_user_name,
+        td.file_type_name,
+        te.user_name mainPersonName
+        from hf_project_batch_file ta
+        left join hf_project_batch tb
+        on ta.batch_id = tb.batch_id
+        left join docframe_user tc
+        on ta.create_user_id = tc.user_id
+        left join hf_file_type_di td
+        on ta.file_type = td.file_type_id
+        left join docframe_user te
+        on ta.main_person = te.user_id
+        where 1=1
+        and ta.is_show = '1'
+        and ta.batch_id=#{batchId}
+        <if test="paramNameLike != null">
+            and ta.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="projectStageId != null">
+            <if test="projectStageId == 'ALL'">
+            </if>
+            <if test="projectStageId != 'ALL'">
+                and ta.project_stage_id = #{projectStageId}
+            </if>
+        </if>
+        <if test="projectStageId == null">
+            and ta.project_stage_id is null
+        </if>
+        order by ta.create_time desc
+    </select>
+
+    <select id="getUserProjectListDao" resultType="cn.nebulaedata.pojo.ProjectPojo">
+        select *
+        from hf_project_space
+        where include_user_id like '%${userId}%'
+    </select>
+
+    <select id="getUserStageListDao" resultType="cn.nebulaedata.pojo.StagePojo">
+        select *
+        from hf_project_stage
+        where project_id in ('${projectListStr}')
+    </select>
+
+    <select id="getStageIdListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select stage_id as `label`,stage_name `value`
+        from hf_project_stage
+        where project_id=#{projectId}
+        <if test="stageName != null">
+            and stage_name like '%${stageName}%'
+        </if>
+    </select>
+
+    <update id="updateStageBatchIdDao">
+        update hf_project_stage
+        set batch_id=#{batchId}
+        where stage_id = #{stageId}
+    </update>
+
+    <select id="getBatchStageListDao" resultType="cn.nebulaedata.pojo.StagePojo">
+        select *
+        from hf_project_stage
+        where batch_id = #{batchId}
+    </select>
+
+    <update id="updateFileStageIdDao">
+        update hf_project_file
+        set stage_id=''
+        where stage_id = #{stageId}
+    </update>
+
+    <select id="getMyDocumentListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*,tb.is_finish,td.user_name create_user_name,
+        case when ta.file_class !='1' and tb.is_finish = '0' then '编制中'
+        when ta.file_class !='1' and tb.is_finish = '1' then '已提交'
+        when ta.file_class='1' and tc.file_uuid is null then '已发布'
+        when ta.file_class='1' and tc.file_uuid is not null then '草稿'
+        else '' end as showStatus,
+        tb.file_version_name,
+        te.file_type_workflow
+        from docframe_file_index ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid=tb.file_uuid
+        and ta.file_version_id=tb.file_version_id
+        left join docframe_file_version_index tc
+        on ta.file_uuid=tc.file_uuid
+        and tc.is_draft='1'
+        left join docframe_user td
+        on ta.create_user_id = td.user_id
+        left join hf_file_type_di te
+        on ta.file_type_id = te.file_type_id
+        where ta.file_status='1'
+        and ta.main_file_uuid is null
+        and ta.main_file_uuid2 is null
+        and (ta.create_user_id=#{userId} or ta.include_user_list like '%${userId}%')
+        <!--        and (file_company_id is null or file_company_id=#{companyId})-->
+        <if test="paramNameLike != null">
+            and ta.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and ta.file_type_id = #{fileTypeId}
+        </if>
+        and file_class != '0'
+        <if test="createTime1 != null">
+            and ta.create_time >= #{createTime1}
+        </if>
+        <if test="createTime2 != null">
+            and #{createTime2} >= ta.create_time
+        </if>
+        <if test="updateTime1 != null">
+            and ta.update_time >= #{updateTime1}
+        </if>
+        <if test="updateTime2 != null">
+            and #{updateTime2} >= ta.update_time
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <insert id="newMyDocumentDao">
+        insert into docframe_file_index
+        (file_uuid, include_user_list, suit_role, suit_type, suit_user, suit_way, suit_bid_method, file_class,
+         create_time, create_user_id, update_user_id, file_name, file_type_id, file_type_name, file_version_id,
+         file_parent_id, is_root_file, file_status, ancestors_file_uuid, file_label_list)
+        values (#{fileUuid}, #{includeUserList}, #{suitRole}, #{suitType}, #{suitUser}, #{suitWay}, #{suitBidMethod},
+                #{fileClass}, #{createTime}, #{createUserId}, #{updateUserId}, #{fileName}, #{fileTypeId},
+                #{fileTypeName}, #{fileVersionId}, #{fileParentId}, #{isRootFile}, #{fileStatus}, #{ancestorsFileUuid},
+                #{fileLabelList})
+    </insert>
+
+    <update id="delMyDocumentDao">
+        update docframe_file_index
+        set file_status='3'
+        where file_uuid=#{fileUuid}
+        <if test="fileVersionId != null">
+            and file_version_id=#{fileVersionId}
+        </if>
+    </update>
+
+    <insert id="addCompanyDao">
+        insert into hf_company_data
+        (company_id, company_name, tax_number, address, post_code, date_establish, registered_capital,
+         legal_person_name, contact_person_name, contact_person_title, business_license, bank_name, phone_number,
+         fax_number, bank_account, bank_license, shareholder_name_list, employees_number, project_manager_number,
+         senior, intermediate, `primary`, full_time_person, website, authorization_code, create_time, create_user_id,
+         update_user_id)
+        values (#{companyId}, #{companyName}, #{taxNumber}, #{address}, #{postCode}, #{dateEstablish},
+                #{registeredCapital}, #{legalPersonName}, #{contactPersonName}, #{contactPersonTitle},
+                #{businessLicense}, #{bankName}, #{phoneNumber}, #{faxNumber}, #{bankAccount}, #{bankLicense},
+                #{shareholderNameListStr}, #{employeesNumber}, #{projectManagerNumber}, #{senior}, #{intermediate},
+                #{primary}, #{fullTimePerson}, #{website}, #{authorizationCode}, #{createTime}, #{createUserId},
+                #{updateUserId})
+    </insert>
+
+    <delete id="delCompanyDao">
+        delete
+        from hf_company_data
+        where company_id = #{companyId}
+    </delete>
+
+    <update id="updateCompanyDao">
+        update hf_company_data
+        set
+        company_name = #{companyName},
+        tax_number = #{taxNumber},
+        address = #{address},
+        post_code = #{postCode},
+        date_establish = #{dateEstablish},
+        registered_capital = #{registeredCapital},
+        legal_person_name = #{legalPersonName},
+        contact_person_name = #{contactPersonName},
+        contact_person_title = #{contactPersonTitle},
+        <if test="businessLicense != null">
+            business_license = #{businessLicense},
+        </if>
+        bank_name = #{bankName},
+        phone_number = #{phoneNumber},
+        fax_number = #{faxNumber},
+        bank_account = #{bankAccount},
+        <if test="bankLicense != null">
+            bank_license = #{bankLicense},
+        </if>
+        shareholder_name_list = #{shareholderNameListStr},
+        employees_number = #{employeesNumber},
+        project_manager_number = #{projectManagerNumber},
+        senior = #{senior},
+        intermediate = #{intermediate},
+        `primary` = #{primary},
+        full_time_person = #{fullTimePerson},
+        website = #{website},
+        update_user_id = #{updateUserId}
+        where company_id = #{companyId}
+    </update>
+
+    <select id="getCompanyInfoDao" resultType="cn.nebulaedata.pojo.CompanyPojo">
+        select *, shareholder_name_list shareholderNameListStr
+        from hf_company_data
+        where company_id = #{companyId}
+    </select>
+
+    <select id="getCompanyListDao" resultType="cn.nebulaedata.pojo.CompanyPojo">
+        select *,shareholder_name_list shareholderNameListStr
+        from hf_company_data
+        where 1=1
+        <if test="paramNameLike != null">
+            and company_name like '%${paramNameLike}%'
+        </if>
+        <if test="companyIdListStr != null">
+            and company_id in ('${companyIdListStr}')
+        </if>
+        order by create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <update id="setDefaultCompanyDao">
+        update docframe_user
+        set company_id = #{companyId}
+        where user_id = #{userId}
+    </update>
+
+    <update id="updateUserCompanyIdListDao">
+        update docframe_user
+        set company_id_list = #{companyIdListStr}
+        where user_id = #{userId}
+    </update>
+
+    <select id="getUserInfoDao" resultType="cn.nebulaedata.pojo.DocUserPojo">
+        select ta.head_img_path avatar, ta.*, tb.roles_name
+        from docframe_user ta
+                 left join docframe_user_roles tb
+                           on ta.roles_id = tb.roles_id
+        where user_id = #{userId}
+    </select>
+
+    <select id="getCompanyByAuthDao" resultType="cn.nebulaedata.pojo.CompanyPojo">
+        select *
+        from hf_company_data
+        where authorization_code = #{authorizationCode}
+    </select>
+
+    <update id="joinCompanyDao">
+        update docframe_user
+        set company_id_list = #{companyIdListStrNew}
+        where user_id = #{userId}
+    </update>
+
+    <insert id="applyJoinCompanyDao">
+        insert into hf_apply_list
+            (apply_id, apply_desc, apply_user_id, apply_content, create_time)
+        values (#{applyId}, #{applyDesc}, #{applyUserId}, #{applyContent}, #{createTime})
+    </insert>
+
+    <select id="getFirstOutlineIdDao" resultType="String">
+        select outline_id
+        from hf_model_outline
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+        order by CAST(outline_order AS signed) asc
+        limit 1
+    </select>
+
+    <select id="getLabelInfoListDao" resultType="cn.nebulaedata.pojo.DocLabelPojo">
+        select ta.*, tb.label_group_name
+        from hf_label ta
+                 left join hf_label_group tb
+                           on ta.label_group_id = tb.label_group_id
+        where 1 = 1
+          and ta.is_del = '0'
+        order by tb.label_group_name, ta.label_content
+    </select>
+
+    <insert id="newBidDocumentIndexDao">
+        insert into docframe_file_index
+        (file_uuid, file_version_id, file_name, file_class, file_parent_id, create_time, create_user_id, update_user_id,
+         ancestors_file_uuid, file_type_id, file_type_name, is_root_file, file_status, file_label_list, folder_id)
+        values (#{fileUuid}, #{fileVersionId}, #{fileName}, #{fileClass}, #{fileParentId}, #{createTime},
+                #{createUserId}, #{updateUserId}, #{ancestorsFileUuid}, #{fileTypeId}, #{fileTypeName}, #{isRootFile},
+                #{fileStatus}, #{fileLabelList}, #{folderId})
+    </insert>
+
+    <insert id="newBidDocumentInfoDao">
+        insert into hf_bid_document_info
+        (file_uuid, file_version_id, project_id, project_name, zbr_company_id, zbr_company_name, jg_company_id,
+         jg_company_name, batch_id, batch_name, package_id, package_name, bidding_type, bidding_style, judgment_method,
+         create_user_id)
+        values (#{fileUuid}, #{fileVersionId}, #{projectId}, #{projectName}, #{zbrCompanyId}, #{zbrCompanyName},
+                #{jgCompanyId}, #{jgCompanyName}, #{batchId}, #{batchName}, #{packageId}, #{packageName},
+                #{biddingType}, #{biddingStyle}, #{judgmentMethod}, #{createUserId})
+    </insert>
+
+    <insert id="newBidDocumentVersionDao">
+        insert into docframe_file_version_index
+        (file_uuid, file_version_id, file_version_name, create_time, file_version_desc, parents_version_id,
+         is_root_version, create_user_id, update_user_id, is_draft, version_status, version_info, confirm_user_id)
+        select #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               'V1.0'           file_version_name,
+               #{createTime}    create_time,
+               file_version_desc,
+               parents_version_id,
+               is_root_version,
+               #{createUserId}  create_user_id,
+               #{createUserId}  update_user_id,
+               is_draft,
+               version_status,
+               version_info,
+               confirm_user_id
+        from docframe_file_version_index
+        where file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </insert>
+
+    <insert id="newBidDocumentOutlineDao">
+        insert into hf_model_outline
+        (outline_id, outline_text, file_uuid, file_version_id, outline_father_id, outline_order, outline_level,
+         outline_property, outline_replace_group_id, color, create_time, create_user_id, update_user_id)
+        values
+            ${sql}
+    </insert>
+
+    <select id="getBidDocumentContentDao" resultType="cn.nebulaedata.pojo.ContentPojo">
+        select content_id,
+               content_text,
+               outline_id,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               #{createTime}    create_time
+        from hf_model_content
+        where file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </select>
+
+    <insert id="newBidDocumentContentDao">
+        insert into hf_model_content
+        (content_id, content_text, outline_id, file_uuid, file_version_id, create_time)
+        values
+            ${sql}
+    </insert>
+
+    <insert id="newBidDocumentParamDao">
+        insert into hf_content_params
+        (uuid, params_uuid, params_text, file_uuid, file_version_id, outline_id, create_time, create_user_id,
+         create_company_id, params_name, params_desc, params_type_id, params_use_scene_id, params_group_id,
+         is_necessary, is_under_line, data_source, params_range, params_columns, matrix_display, matrix_mode,
+         params_classify, show_text, static_params_uuid, is_del, style_id, unit, remark, is_init, params_use_saturation,
+         default_value)
+        select uuid,
+               params_uuid,
+               params_text,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_id,
+               #{createTime}    create_time,
+               #{createUserId}  create_user_id,
+               create_company_id,
+               params_name,
+               params_desc,
+               params_type_id,
+               params_use_scene_id,
+               params_group_id,
+               is_necessary,
+               is_under_line,
+               data_source,
+               params_range,
+               params_columns,
+               matrix_display,
+               matrix_mode,
+               params_classify,
+               show_text,
+               static_params_uuid,
+               is_del,
+               style_id,
+               unit,
+               remark,
+               is_init,
+               params_use_saturation,
+               default_value
+        from hf_content_params
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+          and outline_id in ('${outlineIdListStr}')
+    </insert>
+
+    <insert id="newBidDocumentTagDao">
+        insert into hf_tag
+        (tag_id,type_id,tag_content,file_uuid,file_version_id,outline_id,law_id,words_uuid,bookmark_uuid,create_user_id,is_del,use_is_del,create_time)
+        select
+        tag_id,
+        type_id,
+        tag_content,
+        #{fileUuid} file_uuid,
+        #{fileVersionId} file_version_id,
+        outline_id,
+        law_id,
+        words_uuid,
+        bookmark_uuid,
+        #{createUserId} create_user_id,
+        is_del,
+        case when type_id='4' then '1'
+        else use_is_del
+        end as use_is_del,
+        <!--        use_is_del,-->
+        #{createTime} create_time
+        from hf_tag
+        where 1=1
+        and file_uuid=#{oldFileUuid}
+        and file_version_id=#{oldFileVersionId}
+        and is_del='0'
+        and outline_id in ('${outlineIdListStr}')
+    </insert>
+
+    <insert id="newBidDocumentContentDmDbDao">
+        insert into hf_dm_content_db
+            (db_id, db_name, db_desc, file_uuid, file_version_id,`order`, create_user_id)
+        select db_id,
+               db_name,
+               db_desc,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               `order`,
+               #{createUserId}  create_user_id
+        from hf_dm_content_db
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </insert>
+
+    <insert id="newBidDocumentContentDmTableDao">
+        insert into hf_dm_content_table
+        (table_id, table_name, table_desc, show_pagination, ellipsis, db_id,`order`, create_user_id, file_uuid, file_version_id,
+         father_table_id, father_filter, father_group, source_table_id)
+        select table_id,
+               table_name,
+               table_desc,
+               show_pagination,
+               ellipsis,
+               db_id,
+               `order`,
+               #{createUserId}  create_user_id,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               father_table_id,
+               father_filter,
+               father_group,
+               source_table_id
+        from hf_dm_content_table
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+    </insert>
+
+    <insert id="newBidDocumentContentDmColumnsDao">
+        insert into hf_dm_content_columns
+        (table_id, `key`, title, data_index, field_type, `options`, `unit`, `order`, default_value, required, visible,
+         kind, formula, match_type, match_db_id, match_folder_id,
+         create_user_id, file_uuid, file_version_id)
+        select table_id,
+               `key`,
+               title,
+               data_index,
+               field_type,
+               `options`,
+               `unit`,
+               `order`,
+               default_value,
+               required,
+               visible,
+               kind,
+               formula,
+               match_type,
+               match_db_id,
+               match_folder_id,
+               #{createUserId}  create_user_id,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id
+        from hf_dm_content_columns
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </insert>
+
+    <!--    <insert id="newBidDocumentContentDmDataDao">-->
+    <!--        insert into hf_dm_content_data-->
+    <!--        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)-->
+    <!--        select-->
+    <!--        data_id,-->
+    <!--        data_content,-->
+    <!--        table_id,-->
+    <!--        `order`,-->
+    <!--        #{createUserId} create_user_id,-->
+    <!--        #{fileUuid} file_uuid,-->
+    <!--        #{fileVersionId} file_version_id-->
+    <!--        from hf_dm_content_data-->
+    <!--        where 1=1-->
+    <!--        and file_uuid=#{oldFileUuid}-->
+    <!--        and file_version_id=#{oldFileVersionId}-->
+    <!--    </insert>-->
+
+    <insert id="newBidDocumentContentDbDao">
+        insert into hf_dm_content_use_table
+        (uuid, `name`, `desc`, data_source, ori_data_source, fields, rows, file_uuid, file_version_id, outline_id,
+         create_user_id)
+        select uuid,
+               `name`,
+               `desc`,
+               data_source,
+               ori_data_source,
+               fields,
+               rows,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_id,
+               #{createUserId}  create_user_id
+        from hf_dm_content_use_table
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+          and outline_id in ('${outlineIdListStr}')
+    </insert>
+
+    <insert id="newBidDocumentBookmarkDao">
+        insert into hf_bookmark
+        (bookmark_uuid, bookmark_name, bookmark_desc, file_uuid, file_version_id, outline_id, create_user_id)
+        select bookmark_uuid,
+               bookmark_name,
+               bookmark_desc,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_id,
+               #{createUserId}  create_user_id
+        from hf_bookmark
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+    </insert>
+
+    <select id="getAllSubsidiaryBidFileListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select *
+        from docframe_file_index
+        where main_file_uuid = #{oldFileUuid}
+          and main_file_version_id = #{oldFileVersionId}
+    </select>
+
+    <select id="checkBidKeyDao" resultType="Integer">
+        select count(1)
+        from hf_bid_key ta
+                 left join hf_bid_document_info tb
+                           on ta.project_id = tb.project_id
+        where ta.bid_key = #{bidKey}
+          and tb.file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getBidDocumentInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*, tb.project_id
+        from docframe_file_index ta
+                 left join hf_bid_document_info tb
+                           on ta.file_uuid = tb.file_uuid
+        where ta.file_uuid = #{fileUuid}
+    </select>
+
+    <select id="checkFileExistsDao" resultType="Integer">
+        select count(1)
+        from hf_project_file
+        where 1=1
+        <if test="projectId!=null">
+            and project_id=#{projectId}
+        </if>
+        and file_uuid=#{fileUuid}
+    </select>
+
+    <select id="getMyProjectListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select project_name label, project_id value
+        from hf_project_space
+        order by create_time desc
+    </select>
+
+
+    <select id="getTendDocumentInfoDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        <!--        select tb.file_uuid value,tb.file_name label-->
+        <!--        from docframe_file_index ta-->
+        <!--        left join docframe_file_index tb-->
+        <!--        on ta.file_uuid=tb.main_file_uuid-->
+        <!--        and ta.file_version_id=tb.main_file_version_id-->
+        <!--        where ta.file_uuid=#{fileUuid}-->
+        <!--        and tb.template_type_id='700101'-->
+        <!--        从文库创建文件 20230801-->
+        select tb.file_uuid value,tb.file_name label
+        from hf_file_library ta
+        left join docframe_file_index tb
+        on ta.file_uuid=tb.main_file_uuid
+        and ta.file_version_id=tb.main_file_version_id
+        where ta.file_uuid= #{fileUuid}
+        and ta.file_status = 'online'
+        and tb.template_type_id='700101'
+    </select>
+
+    <select id="getOnlineVersionInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select tb.file_version_id, tc.*
+        from hf_file_library ta
+                 left join docframe_file_version_index tb
+                           on ta.file_uuid = tb.file_uuid
+                               and ta.file_version_id = tb.file_version_id
+                 left join docframe_file_index tc
+                           on ta.file_uuid = tc.file_uuid
+        where ta.file_uuid = #{fileUuid}
+          and ta.file_status = 'online'
+    </select>
+
+    <select id="getTendDocumentInfo2Dao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select tb.file_uuid value, tb.file_name label
+        from docframe_file_index ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.main_file_uuid
+                               and ta.file_version_id = tb.main_file_version_id
+        where ta.file_uuid = #{fileUuid}
+          and tb.template_type_id = '700101'
+        union all
+        select tb.file_uuid value, tb.file_name label
+        from docframe_file_index ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.main_file_uuid2
+                               and ta.file_version_id = tb.main_file_version_id2
+        where ta.file_uuid = #{fileUuid}
+          and tb.template_type_id = '700101'
+    </select>
+
+    <insert id="newTendFileIndexDao">
+        insert into docframe_file_index
+        (file_uuid,include_user_list,create_user_id,update_user_id,file_name,file_type_id,file_type_name,file_version_id,file_parent_id,is_root_file,file_status,ancestors_file_uuid,create_time,file_class,file_company_id,file_label_list,file_use_range_name,file_desc,main_file_uuid,main_file_version_id,template_type_id)
+        select
+        #{fileUuid} file_uuid,
+        include_user_list,
+        #{createUserId} create_user_id,
+        #{createUserId} update_user_id,
+        #{fileName} file_name,
+        'WJ-TBWJ' file_type_id,
+        '投标文件' file_type_name,
+        #{fileVersionId} file_version_id,
+        main_file_uuid file_parent_id,
+        '1' is_root_file,
+        '1' file_status,
+        ancestors_file_uuid,
+        #{createTime} create_time,
+        '3' file_class,
+        file_company_id,
+        file_label_list,
+        file_use_range_name,
+        file_desc,
+        <if test="mainFileUuid == null">
+            null main_file_uuid,
+            null main_file_version_id,
+        </if>
+        <if test="mainFileUuid != null">
+            #{mainFileUuid} main_file_uuid,
+            #{mainFileVersionId} main_file_version_id,
+        </if>
+        '700101' template_type_id
+        from docframe_file_index
+        where file_uuid=#{oldFileUuid}
+    </insert>
+
+    <insert id="newTendFileVersionDao">
+        insert into docframe_file_version_index
+        (file_uuid, file_version_id, file_version_name, create_time, file_version_desc, parents_version_id,
+         is_root_version, create_user_id, update_user_id, is_draft, version_status, version_info, confirm_user_id)
+        select #{fileUuid}         file_uuid,
+               #{fileVersionId}    file_version_id,
+               'V1.0'              file_version_name,
+               #{createTime}       create_time,
+               file_version_desc,
+               #{oldFileVersionId} parents_version_id,
+               is_root_version,
+               #{createUserId}     create_user_id,
+               #{createUserId}     update_user_id,
+               '0'                 is_draft,
+               version_status,
+               version_info,
+               confirm_user_id
+        from docframe_file_version_index
+        where file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </insert>
+
+    <select id="getNewTendFileOutlineDao" resultType="cn.nebulaedata.pojo.OutLinePojo">
+        select outline_id,
+               outline_text,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_father_id,
+               outline_order,
+               outline_level,
+               outline_property,
+               null             outline_replace_group_id,
+               null             color,
+               #{createTime}    create_time,
+               #{createUserId}  create_user_id,
+               #{createUserId}  update_user_id
+        from hf_model_outline
+        where file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and outline_id in ('${outlineIdListStr}')
+        order by cast(outline_order as SIGNED) asc
+    </select>
+    <insert id="newTendFileOutlineDao">
+        insert into hf_model_outline
+        (outline_id, outline_text, file_uuid, file_version_id, outline_father_id, outline_order, outline_level,
+         outline_property, outline_replace_group_id, color, create_time, create_user_id, update_user_id)
+        values
+            ${sql}
+    </insert>
+
+    <select id="getTendFileContentDao" resultType="cn.nebulaedata.pojo.ContentPojo">
+        select content_id,
+               content_text,
+               outline_id,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               #{createTime}    create_time
+        from hf_model_content
+        where file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and outline_id in ('${outlineIdListStr}')
+    </select>
+
+    <insert id="newTendFileContentDao">
+        insert into hf_model_content
+        (content_id, content_text, outline_id, file_uuid, file_version_id, create_time)
+        values
+            ${sql}
+    </insert>
+
+    <insert id="newTendContentParamDao">
+        insert into hf_content_params
+        (uuid, params_uuid, params_text, file_uuid, file_version_id, outline_id, create_time, create_user_id,
+         create_company_id, params_name, params_desc, params_type_id, params_use_scene_id, params_group_id,
+         is_necessary, is_under_line, data_source, params_range, params_columns, matrix_display, matrix_mode,
+         params_classify, show_text, static_params_uuid, is_del, style_id, unit, remark, is_init, params_use_saturation,
+         default_value)
+        select uuid,
+               params_uuid,
+               params_text,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_id,
+               #{createTime}    create_time,
+               #{createUserId}  create_user_id,
+               create_company_id,
+               params_name,
+               params_desc,
+               params_type_id,
+               params_use_scene_id,
+               params_group_id,
+               is_necessary,
+               is_under_line,
+               data_source,
+               params_range,
+               params_columns,
+               matrix_display,
+               matrix_mode,
+               params_classify,
+               show_text,
+               static_params_uuid,
+               is_del,
+               style_id,
+               unit,
+               remark,
+               is_init,
+               params_use_saturation,
+               default_value
+        from hf_content_params
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+          and outline_id in ('${outlineIdListStr}')
+    </insert>
+
+    <insert id="newTendContentTagDao">
+        insert into hf_tag
+        (tag_id, type_id, tag_content, file_uuid, file_version_id, outline_id, law_id, words_uuid, bookmark_uuid,
+         create_user_id, is_del, use_is_del, create_time)
+        select tag_id,
+               type_id,
+               tag_content,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_id,
+               law_id,
+               words_uuid,
+               bookmark_uuid,
+               #{createUserId}  create_user_id,
+               is_del,
+               case
+                   when type_id = '4' then '1'
+                   else use_is_del
+                   end as       use_is_del,
+               #{createTime}    create_time
+        from hf_tag
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+          and outline_id in ('${outlineIdListStr}')
+    </insert>
+
+    <insert id="newTendContentDmDbDao">
+        insert into hf_dm_content_db
+            (db_id, db_name, db_desc, file_uuid, file_version_id,`order`, create_user_id)
+        select db_id,
+               db_name,
+               db_desc,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               `order`,
+               #{createUserId}  create_user_id
+        from hf_dm_content_db
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </insert>
+
+    <insert id="newTendContentDmTableDao">
+        insert into hf_dm_content_table
+        (table_id, table_name, table_desc, show_pagination, ellipsis, db_id,`order`, create_user_id, file_uuid, file_version_id,
+         father_table_id, father_filter, father_group, source_table_id)
+        select table_id,
+               table_name,
+               table_desc,
+               show_pagination,
+               ellipsis,
+               db_id,
+               `order`,
+               #{createUserId}  create_user_id,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               father_table_id,
+               father_filter,
+               father_group,
+               source_table_id
+        from hf_dm_content_table
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+    </insert>
+
+    <insert id="newTendContentDmColumnsDao">
+        insert into hf_dm_content_columns
+        (table_id, `key`, title, data_index, field_type, `options`, `unit`, `order`, default_value, required, visible,
+         kind, formula, match_type, match_db_id, match_folder_id,
+         create_user_id, file_uuid, file_version_id)
+        select table_id,
+               `key`,
+               title,
+               data_index,
+               field_type,
+               `options`,
+               `unit`,
+               `order`,
+               default_value,
+               required,
+               visible,
+               kind,
+               formula,
+               match_type,
+               match_db_id,
+               match_folder_id,
+               #{createUserId}  create_user_id,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id
+        from hf_dm_content_columns
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+    </insert>
+
+    <!--    <insert id="newTendContentDmDataDao">-->
+    <!--        insert into hf_dm_content_data-->
+    <!--        (data_id,data_content,table_id,`order`,create_user_id,file_uuid,file_version_id)-->
+    <!--        select-->
+    <!--        data_id,-->
+    <!--        data_content,-->
+    <!--        table_id,-->
+    <!--        `order`,-->
+    <!--        #{createUserId} create_user_id,-->
+    <!--        #{fileUuid} file_uuid,-->
+    <!--        #{fileVersionId} file_version_id-->
+    <!--        from hf_dm_content_data-->
+    <!--        where 1=1-->
+    <!--        and file_uuid=#{oldFileUuid}-->
+    <!--        and file_version_id=#{oldFileVersionId}-->
+    <!--    </insert>-->
+
+    <insert id="newTendContentDbDao">
+        insert into hf_dm_content_use_table
+        (uuid, `name`, `desc`, data_source, ori_data_source, fields, rows, file_uuid, file_version_id, outline_id,
+         create_user_id)
+        select uuid,
+               `name`,
+               `desc`,
+               data_source,
+               ori_data_source,
+               fields,
+               rows,
+               #{fileUuid}      file_uuid,
+               #{fileVersionId} file_version_id,
+               outline_id,
+               #{createUserId}  create_user_id
+        from hf_dm_content_use_table
+        where 1 = 1
+          and file_uuid = #{oldFileUuid}
+          and file_version_id = #{oldFileVersionId}
+          and is_del = '0'
+          and outline_id in ('${outlineIdListStr}')
+    </insert>
+
+
+    <select id="getBidFromTendDao" resultType="String">
+        select file_parent_id
+        from docframe_file_index
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getLastVersionDao" resultType="String">
+        select file_version_id
+        from docframe_file_index
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getFileInfoListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select file_uuid, file_version_id
+        from docframe_file_index
+        where file_uuid in ('${fileUuidListStr}')
+    </select>
+
+    <select id="getFileAllInfoListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*, tb.collection_cnt, tc.derivation_cnt, td.file_type_name file_type_name_new, te.file_version_name
+        from docframe_file_index ta
+                 left join (select file_uuid, count(1) collection_cnt
+                            from docframe_doc_collection
+                            group by file_uuid) tb
+                           on ta.file_uuid = tb.file_uuid
+                 left join (select file_parent_id, count(1) derivation_cnt
+                            from docframe_file_index
+                            where file_class = '1'
+                              and file_parent_id in ('${fileUuidListStr}')
+                              and main_file_uuid is null
+                              and main_file_uuid2 is null
+                            group by file_parent_id) tc
+                           on ta.file_uuid = tc.file_parent_id
+                 left join hf_file_type_di td
+                           on ta.file_type_id = td.file_type_id
+                 left join (select *
+                            from docframe_file_version_index
+                            where file_uuid in ('${fileUuidListStr}')) te
+                           on ta.file_uuid = te.file_uuid
+                               and ta.file_version_id = te.file_version_id
+        where ta.file_status = '1'
+          and ta.file_uuid in ('${fileUuidListStr}')
+    </select>
+
+    <select id="checkFormNameDao" resultType="Integer">
+        select count(1)
+        from hf_sup_tool_form
+        where 1=1
+        and form_name=#{formName}
+        <if test="formId != null">
+            and form_id != #{formId}
+        </if>
+    </select>
+
+    <insert id="newSupToolFormDao">
+        insert into hf_sup_tool_form
+            (form_id, form_name, form_value, tool_id, create_user_id)
+        values (#{formId}, #{formName}, #{formValue}, #{toolId}, #{createUserId})
+    </insert>
+
+    <delete id="delSupToolFormDao">
+        delete
+        from hf_sup_tool_form
+        where form_id = #{formId}
+    </delete>
+
+    <update id="updateSupToolFormDao">
+        update hf_sup_tool_form
+        set form_name=#{formName},
+            form_value=#{formValue}
+        where form_id = #{formId}
+    </update>
+
+    <select id="getSupToolFormInfoDao" resultType="cn.nebulaedata.pojo.HfSupToolFormPojo">
+        select *
+        from hf_sup_tool_form
+        where form_id = #{formId}
+    </select>
+
+    <select id="getSupToolListDao" resultType="cn.nebulaedata.pojo.HfSupToolFormPojo">
+        select *
+        from hf_sup_tool
+        where 1 = 1
+        order by create_time desc
+    </select>
+
+    <select id="getSupToolFormListDao" resultType="cn.nebulaedata.pojo.HfSupToolFormPojo">
+        select *
+        from hf_sup_tool_form
+        where 1 = 1
+          and create_user_id = #{userId}
+        order by update_time desc
+    </select>
+
+    <insert id="newSupTableDao">
+        insert into hf_sup_table
+            (table_id, title, enabled, columns, create_user_id, label)
+        values (#{tableId}, #{title}, #{enabled}, #{columns}, #{createUserId}, #{label})
+    </insert>
+
+    <insert id="addSupLabelDao">
+        insert into hf_sup_table_label
+            (uuid, label, value, user_id)
+        values (#{uuid}, #{label}, #{value}, #{userId})
+    </insert>
+
+    <select id="checkSupLabelDao" resultType="Integer">
+        select count(1)
+        from hf_sup_table_label
+        where label = #{label}
+          and user_id = #{userId}
+          and is_del = '0'
+    </select>
+
+    <update id="delSupLabelDao">
+        update hf_sup_table_label
+        set is_del = '1'
+        where uuid = #{uuid}
+    </update>
+
+    <select id="getSupLabelInfoDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select uuid, label, value
+        from hf_sup_table_label
+        where uuid = #{uuid}
+    </select>
+
+    <update id="updateSupTableLabelDao">
+        update hf_sup_table
+        set label = #{label}
+        where table_id = #{tableId}
+    </update>
+
+    <select id="getSupLabelListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select uuid, label, value
+        from hf_sup_table_label
+        where 1 = 1
+          and user_id = #{userId}
+          and is_del = '0'
+        order by create_time desc
+    </select>
+
+    <delete id="delSupTableDao">
+        delete
+        from hf_sup_table
+        where table_id = #{tableId}
+    </delete>
+
+
+    <update id="updateSupTableDao">
+        update hf_sup_table
+        set columns = #{columns},
+            title=#{title},
+            enabled=#{enabled},
+            label   = #{label}
+        where table_id = #{tableId}
+    </update>
+
+    <select id="getSupTableInfoDao" resultType="cn.nebulaedata.pojo.HfSupTableFormPojo">
+        select *
+        from hf_sup_table
+        where table_id = #{tableId}
+    </select>
+
+
+    <select id="getSupTableListDao" resultType="cn.nebulaedata.pojo.HfSupTableFormPojo">
+        select ta.*,tb.form_cnt
+        from hf_sup_table ta
+        left join (
+        select table_id,count(1) form_cnt
+        from hf_sup_table_form
+        where create_user_id = #{userId}
+        group by table_id
+        ) tb
+        on ta.table_id=tb.table_id
+        where ta.create_user_id = #{userId}
+        <if test="paramNameLike != null">
+            and ta.title like '%${paramNameLike}%'
+        </if>
+        <if test="enable != null">
+            and ta.enabled = #{enable}
+        </if>
+        order by ta.create_time desc
+    </select>
+
+    <update id="updateUseCntDao">
+        update hf_sup_table
+        set use_cnt =#{useCnt}
+        where table_id = #{tableId}
+    </update>
+
+    <insert id="newSupTableFormDao">
+        insert into hf_sup_table_form
+            (form_id, form_name, form_value, table_id, create_user_id)
+            value
+            (#{formId}, #{formName}, #{formValue}, #{tableId}, #{createUserId})
+    </insert>
+
+    <delete id="delSupTableFormDao">
+        delete from hf_sup_table_form
+        where 1=1
+        <if test="tableId != null">
+            and table_id=#{tableId}
+        </if>
+        <if test="formId != null">
+            and form_id =#{formId}
+        </if>
+    </delete>
+
+    <update id="updateSupTableFormDao">
+        update hf_sup_table_form
+        set form_value = #{formValue},
+            form_name=#{formName}
+        where form_id = #{formId}
+    </update>
+
+    <select id="getSupTableFormInfoDao" resultType="cn.nebulaedata.pojo.HfSupTableFormPojo">
+        select *
+        from hf_sup_table_form
+        where form_id = #{formId}
+    </select>
+
+    <select id="getSupTableFormListDao" resultType="cn.nebulaedata.pojo.HfSupTableFormPojo">
+        select *
+        from hf_sup_table_form
+        where 1=1
+        <if test="tableId != null">
+            and table_id=#{tableId}
+        </if>
+        <if test="userId != null">
+            and create_user_id = #{userId}
+        </if>
+        <if test="paramNameLike != null">
+            and form_name like '%${paramNameLike}%'
+        </if>
+        order by create_time desc
+    </select>
+
+    <select id="getSupTableFormListByformIdDao" resultType="cn.nebulaedata.pojo.HfSupTableFormPojo">
+        select *
+        from hf_sup_table_form
+        where 1=1
+        and table_id = #{tableId}
+        <if test="formIdListStr != null">
+            and form_id in ('${formIdListStr}')
+        </if>
+        order by create_time desc
+    </select>
+
+    <insert id="uploadSupTableExcelDao">
+        insert into hf_sup_table_form
+            (form_id, form_name, form_value, table_id, create_user_id)
+        values
+            ${sql}
+    </insert>
+
+    <select id="getInboxFileListDao" resultType="cn.nebulaedata.pojo.HfProjectInboxPojo">
+        select ta.*,tb.user_name
+        from hf_project_inbox ta
+        left join docframe_user tb
+        on ta.create_user_id=tb.user_id
+        where 1=1
+        <if test="projectId != null">
+            and ta.project_id = #{projectId}
+        </if>
+        <if test="batchId != null">
+            and ta.batch_id = #{batchId}
+        </if>
+        <if test="statusId != null">
+            and ta.status_id=#{statusId}
+        </if>
+        order by ta.status_id, ta.create_time desc
+    </select>
+
+    <select id="getSupParamDataDao" resultType="cn.nebulaedata.pojo.DocParamsPojo">
+        select distinct params_name, params_uuid, params_type_id
+        from hf_content_params
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </select>
+
+    <update id="updateSupParamValueDao">
+        update hf_content_params
+        set params_text = #{paramsText}
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+          and params_uuid = #{paramsUuid}
+    </update>
+
+    <select id="getSupTableListLVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select title label, table_id value
+        from hf_sup_table
+        where create_user_id = #{userId}
+          and enabled = 'true'
+    </select>
+    <select id="getSupTableFormListLVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select form_name label, form_id value, table_id
+        from hf_sup_table_form
+        where create_user_id = #{userId}
+    </select>
+
+
+    <update id="updateInboxFileDao">
+        update hf_project_inbox
+        set status_id=#{statusId}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <select id="getProjectInboxFileInfoDao" resultType="cn.nebulaedata.pojo.HfProjectInboxPojo">
+        select *
+        from hf_project_inbox
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getFileTypeDiDao" resultType="cn.nebulaedata.pojo.HfFileTypeDiPojo">
+        select *
+        from hf_file_type_di
+        where 1=1
+        and in_use='1'
+        <if test="typeGroupId == null">
+            and file_type_group_id = 'WJ'
+        </if>
+        <if test="typeGroupId != null">
+            <if test="typeGroupId == 'ALL'">
+            </if>
+            <if test="typeGroupId != 'ALL'">
+                and file_type_group_id = #{typeGroupId}
+            </if>
+        </if>
+        order by create_time
+    </select>
+
+    <select id="getGroupIdByFileTypeIdDao" resultType="String">
+        select file_type_group_id
+        from hf_file_type_di
+        where file_type_id = #{fileTypeId}
+          and in_use = '1'
+    </select>
+
+    <select id="getModelListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        <if test="type == 'MB'">
+            select ta.file_uuid value,ta.file_name label
+            from docframe_file_index ta
+            left join (
+            select file_uuid
+            from hf_file_library
+            where file_status = 'online'
+            ) tz
+            on ta.file_uuid = tz.file_uuid
+            where 1=1
+            and substring(file_type_id,1,2)='MB'
+            and file_class = '1'
+            and ta.create_user_id = #{userId}
+            and ta.file_status='1'
+            and ta.main_file_uuid is null
+            and ta.main_file_uuid2 is null
+            and tz.file_uuid is not null
+            order by ta.create_time desc
+        </if>
+        <if test="type == 'WJ'">
+            select ta.file_uuid value,ta.file_name label
+            from docframe_file_index ta
+            where 1=1
+            and substring(file_type_id,1,2)='WJ'
+            and (file_class = '2' or file_class = '3')
+            and ta.create_user_id = #{userId}
+            and ta.file_status='1'
+            and ta.main_file_uuid is null
+            and ta.main_file_uuid2 is null
+            order by ta.create_time desc
+        </if>
+    </select>
+
+    <select id="checkModelGroupUniquenessDao" resultType="Integer">
+        select count(1)
+        from hf_model_group
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <insert id="newModelGroupDao">
+        insert into hf_model_group
+        (model_group_id, file_uuid, model_group_name, file_uuid_list, file_use_range_id)
+        values (#{modelGroupId}, #{fileUuid}, #{modelGroupName}, #{fileUuidList}, #{fileUseRangeId})
+    </insert>
+
+    <select id="getModelGroupInfoDao" resultType="cn.nebulaedata.pojo.ModelGroupPojo">
+        select *
+        from hf_model_group
+        where model_group_id = #{modelGroupId}
+    </select>
+
+    <delete id="delModelGroupDao">
+        delete
+        from hf_model_group
+        where model_group_id = #{modelGroupId}
+    </delete>
+
+    <select id="getModelGroupListDao" resultType="cn.nebulaedata.pojo.ModelGroupPojo">
+        select *
+        from hf_model_group
+        order by create_time desc
+    </select>
+    <select id="getModelGroupListKVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select model_group_id value, model_group_name label
+        from hf_model_group
+        order by create_time desc
+    </select>
+
+    <select id="getFileInfoByMainFileUuid2Dao" resultType="String">
+        select file_uuid
+        from docframe_file_index
+        where main_file_uuid2 = #{fileUuid}
+          and main_file_version_id2 = #{fileVersionId}
+    </select>
+
+    <select id="getCommonUseListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,ta.file_version_id,
+        tc.include_user_list,tc.suit_bid_method,tc.create_user_id,tc.update_user_id,tc.file_name,tc.file_type_id,tc.file_type_name,tc.file_parent_id,tc.is_root_file,tc.file_status,tc.ancestors_file_uuid,tc.create_time,tc.update_time,tc.file_class,tc.file_company_id,tc.file_label_list,tc.file_use_range_id,tc.file_use_range_name,tc.file_use_range_text,tc.file_desc,tc.main_file_uuid,tc.main_file_version_id,tc.main_file_uuid2,tc.main_file_version_id2,tc.suit_role,tc.suit_type,tc.suit_user,tc.suit_way,tc.template_type_id,
+        tb.file_version_name,td.user_name createUserName,
+        te.useCnt,
+        tf.derivationNumber,
+        tg.starNum
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid=tc.file_uuid
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        left join (
+        select file_parent_id,count(1) useCnt
+        from docframe_file_index
+        where file_class='2'
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+        and file_status = '1'
+        group by file_parent_id
+        ) te
+        on ta.file_uuid=te.file_parent_id
+        left join (
+        select file_parent_id,count(1) derivationNumber
+        from docframe_file_index
+        where file_class='1'
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+        and file_status='1'
+        group by file_parent_id
+        ) tf
+        on ta.file_uuid = tf.file_parent_id
+        left join (
+        select file_uuid,count(1) starNum
+        from docframe_doc_collection
+        group by file_uuid
+        ) tg
+        on ta.file_uuid = tg.file_uuid
+        where ta.file_status='online'
+        and tc.file_class = '1'
+        <if test="paramNameLike != null">
+            and tc.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and tc.file_type_id = #{fileTypeId}
+        </if>
+        order by cast(te.useCnt as signed) desc,ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+        <if test="limit == null">
+            limit 15
+        </if>
+    </select>
+
+    <select id="getLibraryListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,ta.file_version_id,
+        tc.include_user_list,tc.suit_bid_method,tc.create_user_id,tc.update_user_id,tc.file_name,tc.file_type_id,tc.file_type_name,tc.file_parent_id,tc.is_root_file,tc.file_status,tc.ancestors_file_uuid,tc.create_time,tc.update_time,tc.file_class,tc.file_company_id,tc.file_label_list,tc.file_use_range_id,tc.file_use_range_name,tc.file_use_range_text,tc.file_desc,tc.main_file_uuid,tc.main_file_version_id,tc.main_file_uuid2,tc.main_file_version_id2,tc.suit_role,tc.suit_type,tc.suit_user,tc.suit_way,tc.template_type_id,
+        tb.file_version_name,td.user_name createUserName,
+        te.derivationNumber,
+        tf.starNum
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid=tc.file_uuid
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        left join (
+        select file_parent_id,count(1) derivationNumber
+        from docframe_file_index
+        where file_class='1'
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+        and file_status='1'
+        group by file_parent_id
+        ) te
+        on ta.file_uuid = te.file_parent_id
+        left join (
+        select file_uuid,count(1) starNum
+        from docframe_doc_collection
+        group by file_uuid
+        ) tf
+        on ta.file_uuid = tf.file_uuid
+        where ta.file_status='online'
+        and tc.file_class = '0'
+        <if test="paramNameLike != null">
+            and tc.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and tc.file_type_id = #{fileTypeId}
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getCommonUseList2Dao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,ta.file_version_id,ta.file_status,ta.create_user_id,
+        tc.include_user_list,tc.suit_bid_method,tc.create_user_id,tc.update_user_id,tc.file_name,tc.file_type_id,tc.file_type_name,tc.file_parent_id,tc.is_root_file,tc.file_status,tc.ancestors_file_uuid,tc.create_time,tc.update_time,tc.file_class,tc.file_company_id,tc.file_label_list,tc.file_use_range_id,tc.file_use_range_name,tc.file_use_range_text,tc.file_desc,tc.main_file_uuid,tc.main_file_version_id,tc.main_file_uuid2,tc.main_file_version_id2,tc.suit_role,tc.suit_type,tc.suit_user,tc.suit_way,tc.template_type_id,
+        tb.file_version_name,td.user_name createUserName,te.useCnt
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid=tc.file_uuid
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        left join (
+        select file_parent_id,count(1) useCnt
+        from docframe_file_index
+        where file_class='2'
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+        and file_status = '1'
+        group by file_parent_id
+        ) te
+        on ta.file_uuid=te.file_parent_id
+        where 1=1
+        and tc.file_class = '1'
+        and ta.file_status = 'online'
+        <if test="paramNameLike != null">
+            and tc.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and tc.file_type_id = #{fileTypeId}
+        </if>
+        order by cast(te.useCnt as signed) desc,ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+        <if test="limit == null">
+            limit 15
+        </if>
+    </select>
+
+    <select id="getLibraryList2Dao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,ta.file_version_id,ta.file_status,ta.create_user_id,
+        tc.include_user_list,tc.suit_bid_method,tc.create_user_id,tc.update_user_id,tc.file_name,tc.file_type_id,tc.file_type_name,tc.file_parent_id,tc.is_root_file,tc.file_status,tc.ancestors_file_uuid,tc.create_time,tc.update_time,tc.file_class,tc.file_company_id,tc.file_label_list,tc.file_use_range_id,tc.file_use_range_name,tc.file_use_range_text,tc.file_desc,tc.main_file_uuid,tc.main_file_version_id,tc.main_file_uuid2,tc.main_file_version_id2,tc.suit_role,tc.suit_type,tc.suit_user,tc.suit_way,tc.template_type_id,
+        tb.file_version_name,td.user_name createUserName
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid=tc.file_uuid
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        where 1=1
+        and tc.file_class = '0'
+        and ta.file_status = 'online'
+        <if test="paramNameLike != null">
+            and tc.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and tc.file_type_id = #{fileTypeId}
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getSearchListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,ta.file_version_id,
+        tc.include_user_list,tc.suit_bid_method,tc.create_user_id,tc.update_user_id,tc.file_name,tc.file_type_id,tc.file_type_name,tc.file_parent_id,tc.is_root_file,tc.file_status,tc.ancestors_file_uuid,tc.create_time,tc.update_time,tc.file_class,tc.file_company_id,tc.file_label_list,tc.file_use_range_id,tc.file_use_range_name,tc.file_use_range_text,tc.file_desc,tc.main_file_uuid,tc.main_file_version_id,tc.main_file_uuid2,tc.main_file_version_id2,tc.suit_role,tc.suit_type,tc.suit_user,tc.suit_way,tc.template_type_id,
+        tb.file_version_name,td.user_name createUserName
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid=tc.file_uuid
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        where ta.file_status='online'
+        and (tc.file_class = '0' or tc.file_class = '1')
+        <if test="paramNameLike != null">
+            and tc.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and tc.file_type_id = #{fileTypeId}
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getModelRateDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select file_type_id, count(1) cnt
+        from docframe_file_index
+        where file_class = '1'
+          and file_status = '1'
+          and main_file_uuid is null
+          and main_file_uuid2 is null
+        group by file_type_id
+    </select>
+
+    <select id="getFileRateDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select file_type_id, count(1) cnt
+        from docframe_file_index
+        where file_class = '2'
+          and file_status = '1'
+          and main_file_uuid is null
+          and main_file_uuid2 is null
+        group by file_type_id
+    </select>
+
+    <select id="getMyCreateModelCntDao" resultType="Integer">
+        select count(1)
+        from docframe_file_index
+        where create_user_id = #{userId}
+          and file_class = '1'
+          and file_status = '1'
+          and main_file_uuid is null
+          and main_file_uuid2 is null
+    </select>
+    <select id="getMyCreateFileCntDao" resultType="Integer">
+        select count(1)
+        from docframe_file_index
+        where create_user_id = #{userId}
+          and file_status = '1'
+          and main_file_uuid is null
+          and main_file_uuid2 is null
+          and (file_class = '2' or file_class = '3')
+    </select>
+    <select id="getMyCollectCntDao" resultType="Integer">
+        select count(1)
+        from docframe_doc_collection ta
+        left join docframe_file_index tb
+        on ta.file_uuid=tb.file_uuid
+        where ta.user_id=#{userId}
+        and tb.file_uuid is not null
+        <!--        and tb.file_class='1'-->
+        and tb.file_status='1'
+    </select>
+
+    <select id="getHeatMapDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        <!--        select SUBSTR(create_time,1,10) createDate,count(1) cnt-->
+        <!--        from docframe_file_index-->
+        <!--        where file_status='1'-->
+        <!--        and (file_class='0' or file_class='1')-->
+        <!--        and main_file_uuid is null-->
+        <!--        and main_file_uuid2 is null-->
+        <!--        group by SUBSTR(create_time,1,10)-->
+        <!--        order by SUBSTR(create_time,1,10) desc-->
+        select SUBSTR(create_time,1,10) createDate,count(1) cnt
+        from docframe_file_version_index
+        where is_root_version = '0'
+        and is_draft = '0'
+        group by SUBSTR(create_time,1,10)
+        order by SUBSTR(create_time,1,10) desc
+        limit 120
+    </select>
+
+    <!--    <select id="getMasterModelDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">-->
+    <!--        select ta.*,tb.is_finish,-->
+    <!--        case when tb.is_finish='0' then '编制中'-->
+    <!--        when tb.is_finish='1' then '已完成'-->
+    <!--        else '' end as showStatus-->
+    <!--        from docframe_file_index ta-->
+    <!--        left join docframe_file_version_index tb-->
+    <!--        on ta.file_uuid=tb.file_uuid-->
+    <!--        and ta.file_version_id=tb.file_version_id-->
+    <!--        where ta.file_status='1'-->
+    <!--        and ta.main_file_uuid is null-->
+    <!--        and ta.main_file_uuid2 is null-->
+    <!--        and (ta.create_user_id=#{userId} or ta.include_user_list like '%${userId}%')-->
+    <!--        &lt;!&ndash;        and (file_company_id is null or file_company_id=#{companyId})&ndash;&gt;-->
+    <!--        <if test="paramNameLike != null">-->
+    <!--            and ta.file_name like '%${paramNameLike}%'-->
+    <!--        </if>-->
+    <!--        <if test="fileTypeId != null">-->
+    <!--            and ta.file_type_id = #{fileTypeId}-->
+    <!--        </if>-->
+    <!--        and ta.file_class = '0'-->
+    <!--        order by ta.create_time desc-->
+    <!--        <if test="limit != null">-->
+    <!--            limit ${limit}-->
+    <!--        </if>-->
+    <!--    </select>-->
+
+    <select id="getMasterModelDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*,tc.file_version_name,td.user_name createUserName
+        from docframe_file_index ta
+        left join docframe_file_version_index tc
+        on ta.file_uuid=tc.file_uuid
+        and ta.file_version_id=tc.file_version_id
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        where ta.file_status='1'
+        and ta.file_class = '0'
+        and ta.main_file_uuid is null
+        and ta.main_file_uuid2 is null
+        <if test="paramNameLike != null">
+            and ta.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileTypeId != null">
+            and ta.file_type_id = #{fileTypeId}
+        </if>
+        order by ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <select id="getMasterModelLVDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select file_uuid value, file_name label
+        from docframe_file_index ta
+        where ta.file_status = '1'
+          and ta.file_class = '0'
+          and ta.main_file_uuid is null
+          and ta.main_file_uuid2 is null
+    </select>
+
+    <select id="getRecentFileListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        <!--        select ta.*,tb.is_finish,td.user_name create_user_name,-->
+        <!--        case when ta.file_class !='1' and tb.is_finish = '0' then '编制中'-->
+        <!--        when ta.file_class !='1' and tb.is_finish = '1' then '已提交'-->
+        <!--        when ta.file_class='1' and tc.file_uuid is null then '已发布'-->
+        <!--        when ta.file_class='1' and tc.file_uuid is not null then '草稿'-->
+        <!--        else '' end as showStatus,-->
+        <!--        tb.file_version_name,-->
+        <!--        tf.file_type_workflow-->
+        <!--        from docframe_file_index ta-->
+        <!--        left join docframe_file_version_index tb-->
+        <!--        on ta.file_uuid=tb.file_uuid-->
+        <!--        and ta.file_version_id=tb.file_version_id-->
+        <!--        left join docframe_file_version_index tc-->
+        <!--        on ta.file_uuid=tc.file_uuid-->
+        <!--        and tc.is_draft='1'-->
+        <!--        left join docframe_user td-->
+        <!--        on ta.create_user_id = td.user_id-->
+        <!--        <if test="fileTypeGroupId != null">-->
+        <!--            left join hf_file_type_di te-->
+        <!--            on ta.file_type_id = te.file_type_id-->
+        <!--        </if>-->
+        <!--        left join hf_file_type_di tf-->
+        <!--        on ta.file_type_id = tf.file_type_id-->
+        <!--        where ta.file_status='1'-->
+        <!--        and ta.main_file_uuid is null-->
+        <!--        and ta.main_file_uuid2 is null-->
+        <!--        and ta.file_class != '0'-->
+        <!--        and (ta.create_user_id=#{userId} or ta.include_user_list like '%${userId}%')-->
+        <!--        <if test="fileTypeGroupId != null">-->
+        <!--            and te.file_type_group_id = #{fileTypeGroupId}-->
+        <!--        </if>-->
+        <!--        order by ta.update_time desc-->
+        <!--        <if test="num != null">-->
+        <!--            limit ${num}-->
+        <!--        </if>-->
+        <!--        从文库创建文件 20230801-->
+        select ta.file_uuid,ta.file_version_id,tb.is_finish,td.user_name create_user_name,
+        case when tg.file_class !='1' and tb.is_finish = '0' then '编制中'
+        when tg.file_class !='1' and tb.is_finish = '1' then '已提交'
+        when tg.file_class='1' and tc.file_uuid is null then '已发布'
+        when tg.file_class='1' and tc.file_uuid is not null then '草稿'
+        else '' end as showStatus,
+        tb.file_version_name,
+        tf.file_type_workflow,
+        tg.*
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid=tb.file_uuid
+        and ta.file_version_id=tb.file_version_id
+        left join docframe_file_index tg
+        on ta.file_uuid = tg.file_uuid
+        left join docframe_file_version_index tc
+        on ta.file_uuid=tc.file_uuid
+        and tc.is_draft='1'
+        left join docframe_user td
+        on tg.create_user_id = td.user_id
+        <if test="fileTypeGroupId != null">
+            left join hf_file_type_di te
+            on tg.file_type_id = te.file_type_id
+        </if>
+        left join hf_file_type_di tf
+        on tg.file_type_id = tf.file_type_id
+        where tg.file_status='1'
+        and ta.file_status = 'online'
+        and tg.main_file_uuid is null
+        and tg.main_file_uuid2 is null
+        and tg.file_class != '0'
+        <!--        and (tg.create_user_id=#{userId} or tg.include_user_list like '%${userId}%')-->
+        <if test="fileTypeGroupId != null">
+            and te.file_type_group_id = #{fileTypeGroupId}
+        </if>
+        order by tg.update_time desc
+        <if test="num != null">
+            limit ${num}
+        </if>
+    </select>
+
+    <select id="getRecentFileList2Dao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*,tb.is_finish,td.user_name create_user_name,
+        case when ta.file_class !='1' and tb.is_finish = '0' then '编制中'
+        when ta.file_class !='1' and tb.is_finish = '1' then '已提交'
+        when ta.file_class='1' and tc.file_uuid is null then '已发布'
+        when ta.file_class='1' and tc.file_uuid is not null then '草稿'
+        else '' end as showStatus,
+        tb.file_version_name,
+        tf.file_type_workflow
+        from docframe_file_index ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid=tb.file_uuid
+        and ta.file_version_id=tb.file_version_id
+        left join docframe_file_version_index tc
+        on ta.file_uuid=tc.file_uuid
+        and tc.is_draft='1'
+        left join docframe_user td
+        on ta.create_user_id = td.user_id
+        <if test="fileTypeGroupId != null">
+            left join hf_file_type_di te
+            on ta.file_type_id = te.file_type_id
+        </if>
+        left join hf_file_type_di tf
+        on ta.file_type_id = tf.file_type_id
+        where ta.file_status='1'
+        and ta.main_file_uuid is null
+        and ta.main_file_uuid2 is null
+        and ta.file_class != '0'
+        and (ta.create_user_id=#{userId} or ta.include_user_list like '%${userId}%')
+        <if test="fileTypeGroupId != null">
+            and te.file_type_group_id = #{fileTypeGroupId}
+        </if>
+        order by ta.update_time desc
+        <if test="num != null">
+            limit ${num}
+        </if>
+
+    </select>
+
+    <select id="getAuditingFileListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.*,
+        tb.file_version_name,
+        tb.version_info,
+        tb.compare_info,
+        tb.annotate,
+        td.user_name createUserName,
+        tc.file_name,
+        tc.file_type_id,
+        te.file_type_name,
+        case when tc.file_class = '0' then '母版'
+        when tc.file_class = '1' then '模板' end as fileClass
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid = tc.file_uuid
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        left join hf_file_type_di te
+        on tc.file_type_id = te.file_type_id
+        where ta.auditing_status = '待审核'
+        and ta.is_del='0'
+        <if test="paramNameLike != null">
+            and tc.file_name like '%${paramNameLike}%'
+        </if>
+        order by ta.create_time desc
+    </select>
+
+    <update id="changeAuditingFileStatusDao">
+        update hf_file_library
+        set auditing_status = #{auditingStatus}
+        <if test="auditingReason != null">
+            ,auditing_reason = #{auditingReason}
+        </if>
+        <if test="auditingUserId != null">
+            ,auditing_user_id = #{auditingUserId}
+        </if>
+        ,auditing_time = #{auditingTime}
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </update>
+
+    <select id="getAuditingFileRecordDao" resultType="cn.nebulaedata.pojo.HfFileLibraryPojo">
+        select *
+        from hf_file_library
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </select>
+
+    <insert id="noticeCreateUserDao">
+        insert into hf_auditing_result_notice
+        (auditing_uuid, auditing_content, file_uuid, file_version_id, notice_user_id, notice_type)
+        values (#{auditingUuid}, #{auditingContent}, #{fileUuid}, #{fileVersionId}, #{noticeUserId}, #{noticeType})
+    </insert>
+
+    <select id="getResultNoticeDao" resultType="cn.nebulaedata.pojo.HfAuditingResultNoticePojo">
+        select ta.*,tb.file_type_id,tb.file_name
+        from hf_auditing_result_notice ta
+        left join docframe_file_index tb
+        on ta.file_uuid = tb.file_uuid
+        where notice_user_id = #{userId}
+        <!--        <if test="isRead == null">-->
+        <!--            and is_read = '0'-->
+        <!--        </if>-->
+        <if test="noticeType != null">
+            and ta.notice_type in ('${noticeType}')
+        </if>
+        order by is_read,create_time desc
+    </select>
+
+    <update id="readResultNoticeDao">
+        update hf_auditing_result_notice
+        set is_read = '1'
+        where auditing_uuid = #{auditingUuid}
+    </update>
+
+    <select id="getLibraryFileManagementListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,ta.file_version_id,
+        ta.file_name,
+        case when ta.file_class = '0' then '母版'
+        when ta.file_class = '1' then '模板' end as fileClass,
+        ta.file_type_id,
+        te.file_type_name,
+        ta.create_time,
+        td.user_name createUserName
+        from docframe_file_index ta
+        left join docframe_user td
+        on ta.create_user_id=td.user_id
+        left join hf_file_type_di te
+        on ta.file_type_id = te.file_type_id
+        where (ta.file_class = '0' or ta.file_class = '1')
+        <!--        and ta.file_status='1'-->
+        and ta.main_file_uuid is null
+        and ta.main_file_uuid2 is null
+        <if test="paramNameLike != null">
+            and ta.file_name like '%${paramNameLike}%'
+        </if>
+        <if test="fileClassStr != null">
+            and ta.file_class in ('${fileClassStr}')
+        </if>
+        <if test="fileTypeIdStr != null">
+            and ta.file_type_id in ('${fileTypeIdStr}')
+        </if>
+        order by ta.create_time desc
+    </select>
+    <select id="getLibraryFileVersionListAuditingInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select ta.file_uuid,
+               ta.file_version_id,
+               tb.file_version_name,
+               ta.file_status fileLineStatus,
+               ta.is_recommend,
+               ta.create_time
+        from hf_file_library ta
+                 left join docframe_file_version_index tb
+                           on ta.file_uuid = tb.file_uuid
+                               and ta.file_version_id = tb.file_version_id
+        where ta.auditing_status = '通过'
+          and ta.is_del = '0'
+        order by ta.create_time desc
+    </select>
+
+
+    <select id="getLibraryFileVersionListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select file_version_id value, file_version_name label
+        from hf_file_library
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <update id="changeLibraryFileStatusDao">
+        update hf_file_library
+        set file_status = #{fileStatus}
+        where file_uuid = #{fileUuid}
+        <if test="fileVersionId != null">
+            and file_version_id = #{fileVersionId}
+        </if>
+    </update>
+
+    <select id="getLibraryFileLineStatusDao" resultType="Integer">
+        select count(1)
+        from hf_file_library
+        where file_uuid = #{fileUuid}
+          and file_status = 'online'
+    </select>
+
+    <delete id="deleteLibraryFileDao">
+        update hf_file_library
+        set is_del = '1'
+        where file_uuid = #{fileUuid}
+        <if test="fileVersionId != null">
+            and file_version_id = #{fileVersionId}
+        </if>
+    </delete>
+
+
+    <update id="changeLibraryFileRecommendDao">
+        update hf_file_library
+        set is_recommend = #{recommend}
+        where file_uuid = #{fileUuid}
+    </update>
+
+    <insert id="addUserDao">
+        insert into docframe_user
+        (user_id, user_phone, user_name, user_password, roles_id, company_id, company_id_list, create_time)
+        values (#{userId}, #{userPhone}, #{userName}, #{userPassword}, #{rolesId}, #{companyId}, #{companyIdList},
+                #{createTime})
+    </insert>
+
+    <select id="checkUserDao" resultType="Integer">
+        select count(1)
+        from docframe_user
+        where (user_phone = #{userPhone} or user_name = #{userPhone})
+        and user_status = '1'
+        <if test="userId != null">
+            and user_id != #{userId}
+        </if>
+    </select>
+    <select id="checkUserNameDao" resultType="Integer">
+        select count(1)
+        from docframe_user
+        where (user_name = #{userName} or user_phone = #{userName})
+        and user_status = '1'
+        <if test="userId != null">
+            and user_id != #{userId}
+        </if>
+    </select>
+
+    <update id="delUserDao">
+        update docframe_user
+        set user_status = '3'
+        where user_id = #{userId}
+    </update>
+
+    <update id="updateUserDao">
+        update docframe_user
+        set user_id=user_id
+        <if test="userPhone != null">
+            ,user_phone = #{userPhone}
+        </if>
+        <if test="userName != null">
+            ,user_name = #{userName}
+        </if>
+        <if test="rolesId != null">
+            ,roles_id = #{rolesId}
+        </if>
+        <if test="companyId != null">
+            ,company_id = #{companyId}
+        </if>
+        where user_id = #{userId}
+    </update>
+
+
+    <select id="getUserInfoListDao" resultType="cn.nebulaedata.pojo.DocUserPojo">
+        select ta.*,tb.roles_name
+        from docframe_user ta
+        left join docframe_user_roles tb
+        on ta.roles_id = tb.roles_id
+        where 1=1
+        and user_status = '1'
+        <if test="paramNameLike != null">
+            and user_name like '%${paramNameLike}%'
+        </if>
+    </select>
+
+    <update id="resetPasswordDao">
+        update docframe_user
+        set user_password = '8ddcff3a80f4189ca1c9d4d902c3c909'
+        where user_id = #{userId}
+    </update>
+
+    <insert id="addRolesDao">
+        insert into docframe_user_roles
+            (roles_id, roles_name)
+        values (#{rolesId}, #{rolesName})
+    </insert>
+
+    <insert id="addRolesToMenuDao">
+        insert into docframe_roles_to_menu
+        (roles_id, menu_id)
+        values
+        <foreach collection="menu" separator="," item="m">
+            (#{rolesId},#{m})
+        </foreach>
+    </insert>
+
+    <select id="checkRolesNameDao" resultType="Integer">
+        select count(1)
+        from docframe_user_roles
+        where is_del = '0'
+        and roles_name = #{rolesName}
+        <if test="rolesId != null">
+            and roles_id != #{rolesId}
+        </if>
+    </select>
+
+    <update id="delRolesDao">
+        update docframe_user_roles
+        set is_del = '1'
+        where roles_id = #{rolesId}
+    </update>
+
+    <select id="checkRolesUseDao" resultType="Integer">
+        select count(1)
+        from (select *
+              from docframe_user
+              where roles_id = #{rolesId}
+              limit 1) ta
+    </select>
+
+    <delete id="delRolesToMenuDao">
+        delete
+        from docframe_roles_to_menu
+        where roles_id = #{rolesId}
+    </delete>
+
+    <select id="getRolesToMenuDao" resultType="cn.nebulaedata.pojo.DocMenuPojo">
+        select tb.menu_id `id`,tb.menu_id,tb.menu_name,tb.father_id,tb.`route`,tb.path,tb.is_menu
+        from docframe_roles_to_menu ta
+                 left join docframe_menu tb
+                           on ta.menu_id = tb.menu_id
+        where ta.roles_id = #{rolesId}
+          and tb.menu_id is not null
+        and tb.is_del = '0'
+        order by tb.`order`
+    </select>
+
+    <update id="chgRolesDao">
+        update docframe_user_roles
+        set roles_name = #{rolesName}
+        where roles_id = #{rolesId}
+    </update>
+
+    <select id="getRolesInfoDao" resultType="cn.nebulaedata.pojo.DocUserRolesPojo">
+        select roles_id, roles_name
+        from docframe_user_roles
+        where roles_id = #{rolesId}
+          and is_del = '0'
+    </select>
+
+    <select id="getRolesListDao" resultType="cn.nebulaedata.pojo.DocUserRolesPojo">
+        select ta.roles_id, ta.roles_name,ta.create_time, group_concat(tb.menu_id) menuStr, group_concat(tc.menu_name)
+        menuNameStr
+        from docframe_user_roles ta
+        left join docframe_roles_to_menu tb
+        on ta.roles_id = tb.roles_id
+        left join docframe_menu tc
+        on tb.menu_id = tc.menu_id
+        where 1=1
+        <if test="paramNameLike != null">
+            and ta.roles_name like '%${paramNameLike}%'
+        </if>
+        and ta.is_del = '0'
+        group by ta.roles_id, ta.roles_name,ta.create_time
+        order by ta.create_time desc
+    </select>
+
+    <select id="getMenuListDao" resultType="cn.nebulaedata.pojo.DocMenuPojo">
+        select menu_id `id`, menu_id, menu_name, father_id, route, path, is_menu
+        from docframe_menu
+        where is_del = '0'
+        order by `order`
+    </select>
+
+    <select id="getRolesDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select roles_id value, roles_name label
+        from docframe_user_roles
+        where is_del = '0'
+        order by create_time desc
+    </select>
+
+    <insert id="addHfMyDownloadDao">
+        insert into hf_my_download
+        (uuid, user_id, file_uuid, file_version_id, file_name, file_path, file_status, file_type, d_type, ffid)
+        values (#{uuid}, #{userId}, #{fileUuid}, #{fileVersionId}, #{fileName}, #{filePath}, #{fileStatus}, #{fileType}, #{dType}, #{ffid})
+    </insert>
+
+    <delete id="delMyDownloadDao">
+        delete
+        from hf_my_download
+        where uuid = #{uuid}
+    </delete>
+
+    <select id="getMyDownloadListDao" resultType="cn.nebulaedata.pojo.HfMyDownload">
+        select uuid ,
+        user_id ,
+        file_uuid ,
+        file_version_id ,
+        file_name ,
+        file_status ,
+        file_type ,
+        file_type file_type_name,
+        file_size ,
+        create_time ,
+        update_time
+        from hf_my_download
+        where user_id = #{userId}
+        <if test="paramNameLike != null">
+            and file_name like '%${paramNameLike}%'
+        </if>
+        and d_type = '0'
+        order by create_time desc
+    </select>
+
+    <select id="getMyDownloadInfoDao" resultType="cn.nebulaedata.pojo.HfMyDownload">
+        select *
+        from hf_my_download
+        where uuid = #{uuid}
+    </select>
+
+    <insert id="newDownloadRecordDao">
+        insert into hf_my_download_record
+            (log_id, uuid, user_id)
+        values (#{logId}, #{uuid}, #{userId})
+    </insert>
+
+    <select id="getDownloadRecordListDao" resultType="cn.nebulaedata.pojo.HfMyDownloadRecordPojo">
+        select ta.*,tb.file_name,tb.file_type,tc.user_name
+        from hf_my_download_record ta
+        left join hf_my_download tb
+        on ta.uuid = tb.uuid
+        left join docframe_user tc
+        on ta.user_id = tc.user_id
+        where 1=1
+        <if test="paramNameLike != null">
+            and tb.file_name like '%${paramNameLike}%'
+        </if>
+        order by ta.create_time desc
+    </select>
+
+    <update id="updateHfMyDownloadDao">
+        update hf_my_download
+        set file_status = #{fileStatus}
+        <if test="path != null">
+            ,file_path = #{path}
+        </if>
+        <if test="sizeInMB != null">
+            ,file_size = #{sizeInMB}
+        </if>
+        where uuid = #{uuid}
+    </update>
+
+    <insert id="newAssessModelDao">
+        insert into hf_assess_model
+        (assess_id, assess_name, model_type, clause_number, label, create_user_id)
+        values (#{assessId}, #{assessName}, #{modelType}, #{clauseNumber}, #{label}, #{createUserId})
+    </insert>
+
+    <delete id="delAssessModelDao">
+        delete
+        from hf_assess_model
+        where assess_id = #{assessId}
+    </delete>
+
+    <update id="updateAssessModelDao">
+        update hf_assess_model
+        set assess_name = #{assessName},
+        <!--        assess_method = #{assessMethod},-->
+        <!--        assess_link = #{assessLink},-->
+        <!--        assess_type = #{assessType},-->
+        model_type = #{modelType},
+        clause_number = #{clauseNumber},
+        label = #{label}
+        where assess_id = #{assessId}
+    </update>
+
+    <select id="getAssessModelInfoDao" resultType="cn.nebulaedata.pojo.HfAssessModelPojo">
+        select *
+        from hf_assess_model
+        where assess_id = #{assessId}
+    </select>
+
+    <select id="getAssessModelListDao" resultType="cn.nebulaedata.pojo.HfAssessModelPojo">
+        select *
+        from hf_assess_model
+        where 1=1
+        <if test="paramNameLike != null">
+            and assess_name like '%${paramNameLike}%'
+        </if>
+        order by create_time desc
+    </select>
+
+    <insert id="newAssessModelElementDao">
+        insert into hf_assess_model_element
+        (element_id, element_type, element_yinsu, element_standard, quantization_yinsu, quantization_standard,
+         quantization_rules, gradation, threshold_value, params_id_list, assess_id, `order`, element_type_order,
+         create_user_id)
+        values (#{elementId}, #{elementType}, #{elementYinsu}, #{elementStandard}, #{quantizationYinsu},
+                #{quantizationStandard}, #{quantizationRules}, #{gradation}, #{thresholdValue}, #{paramsIdList},
+                #{assessId}, #{order}, #{elementTypeOrder}, #{createUserId})
+    </insert>
+
+    <delete id="delAssessModelElementDao">
+        delete
+        from hf_assess_model_element
+        where 1 = 1
+          and assess_id = #{assessId}
+          and element_type = #{elementType}
+    </delete>
+
+    <update id="updateAssessModelElementDao">
+        update hf_assess_model_element
+        set element_type=#{elementType},
+            element_yinsu=#{elementYinsu},
+            element_standard=#{elementStandard},
+            quantization_yinsu=#{quantizationYinsu},
+            quantization_standard=#{quantizationStandard},
+            quantization_rules=#{quantizationRules},
+            gradation=#{gradation},
+            threshold_value=#{thresholdValue},
+            params_id_list=#{paramsIdList}
+        where element_id = #{elementId}
+    </update>
+
+    <select id="getAssessModelElementListByTypeDao" resultType="cn.nebulaedata.pojo.HfAssessModelElementPojo">
+        select *
+        from hf_assess_model_element
+        where 1 = 1
+          and assess_id = #{assessId}
+          and element_type = #{elementType}
+    </select>
+
+    <select id="getAssessModelElementListDao" resultType="cn.nebulaedata.pojo.HfAssessModelElementPojo">
+        select *
+        from hf_assess_model_element
+        where 1=1
+        and assess_id = #{assessId}
+        <if test="paramNameLike != null">
+            and assess_name like '%${paramNameLike}%'
+        </if>
+        order by create_time desc
+    </select>
+
+    <select id="getFastAssessElementListDao" resultType="cn.nebulaedata.pojo.HfFastAssessElementPojo">
+        select *
+        from hf_fast_assess_element
+        where 1=1
+        and fast_id = #{fastId}
+        and tab_uuid = #{tabUuid}
+        and assess_id = #{assessId}
+        <if test="paramNameLike != null">
+            and assess_name like '%${paramNameLike}%'
+        </if>
+        order by create_time desc
+    </select>
+
+    <select id="getAssessModelElementListCntDao" resultType="Integer">
+        select count(1)
+        from hf_assess_model_element
+        where assess_id = #{assessId}
+          and element_type = #{elementType}
+    </select>
+    <select id="getAssessModelTypeCntDao" resultType="Integer">
+        select count(distinct element_type)
+        from hf_assess_model_element
+        where assess_id = #{assessId}
+          and element_type != #{elementType}
+    </select>
+    <select id="getElementTypeOrderDao" resultType="String">
+        select element_type_order
+        from hf_assess_model_element
+        where assess_id = #{assessId}
+          and element_type = #{elementType}
+        limit 1
+    </select>
+
+    <select id="getElementTypeOrderListDao" resultType="cn.nebulaedata.pojo.HfAssessModelElementPojo">
+        select element_type, element_type_order
+        from hf_assess_model_element
+        where assess_id = #{assessId}
+        group by element_type, element_type_order
+        order by cast(element_type_order as SIGNED) asc
+    </select>
+    <select id="getFastElementTypeOrderListDao" resultType="cn.nebulaedata.pojo.HfFastAssessElementPojo">
+        select element_type, element_type_order
+        from hf_fast_assess_element
+        where fast_id = #{fastId}
+          and tab_uuid = #{tabUuid}
+          and assess_id = #{assessId}
+        group by element_type, element_type_order
+        order by cast(element_type_order as SIGNED) asc
+    </select>
+
+    <update id="updateAssessModelOrderDao">
+        update hf_assess_model_element
+        set element_type_order = #{elementTypeOrder}
+        where element_id in ('${elementIdList}')
+    </update>
+
+    <select id="getAssessModelParamDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select params_uuid value,params_name label
+        from docframe_params
+        where 1=1
+        <if test="paramsUseSceneId != null">
+            and params_use_scene_id = #{paramsUseSceneId}
+        </if>
+        <if test="userId != null">
+            and create_user_id = #{userId}
+        </if>
+        order by create_time desc
+    </select>
+
+
+    <select id="getHelpDocCatalogueDao" resultType="cn.nebulaedata.pojo.HfHelpDocCatalogue">
+        select *
+        from hf_help_doc_catalogue
+    </select>
+
+    <select id="getHelpDocContentDao" resultType="cn.nebulaedata.pojo.HfHelpDocCatalogue">
+        select ta.*, tb.help_doc_name
+        from hf_help_doc_content ta
+                 left join hf_help_doc_catalogue tb
+                           on ta.help_doc_id = tb.help_doc_id
+        where ta.help_doc_id = #{helpDocId}
+    </select>
+
+    <select id="searchHelpDocDao" resultType="cn.nebulaedata.pojo.HfHelpDocCatalogue">
+        select ta.*, tb.help_doc_content, tc.help_doc_name fatherHelpDocName
+        from hf_help_doc_catalogue ta
+                 left join hf_help_doc_content tb
+                           on ta.help_doc_id = tb.help_doc_id
+                 left join hf_help_doc_catalogue tc
+                           on ta.father_id = tc.help_doc_id
+        where ta.level = '2'
+    </select>
+
+    <select id="getRecentBuildDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select tb.file_type_id value, tb.file_type_name label
+        from docframe_file_index ta
+                 left join hf_file_type_di tb
+                           on ta.file_type_id = tb.file_type_id
+                               and tb.in_use = '1'
+        where ta.create_user_id = #{userId}
+          and ta.main_file_uuid is null
+          and ta.main_file_uuid2 is null
+          and ta.file_class != '0'
+          and tb.file_type_id is not null
+        order by ta.create_time desc
+        limit 10
+    </select>
+
+    <insert id="newJudgeDao">
+        insert into hf_judge
+        (judge_id, judge_name, batch_id, project_stage_id, file_uuid_list, assess_id, create_user_id)
+        values (#{judgeId}, #{judgeName}, #{batchId}, #{projectStageId}, #{fileUuidList}, #{assessId}, #{createUserId})
+    </insert>
+
+    <delete id="delJudgeDao">
+        delete
+        from hf_judge
+        where judge_id = #{judgeId}
+    </delete>
+
+    <update id="updateJudgeDao">
+        update hf_judge
+        set judge_name       =#{judgeName},
+            batch_id         =#{batchId},
+            project_stage_id =#{projectStageId},
+            file_uuid_list   =#{fileUuidList},
+            assess_id        =#{assessId}
+        where judge_id = #{judgeId}
+    </update>
+
+    <select id="getJudgeInfoDao" resultType="cn.nebulaedata.pojo.HfJudgePojo">
+        select *
+        from hf_judge
+        where judge_id = #{judgeId}
+    </select>
+
+    <select id="getJudgeListDao" resultType="cn.nebulaedata.pojo.HfJudgePojo">
+        select ta.*,tb.user_name create_user_name
+        from hf_judge ta
+        left join docframe_user tb
+        on ta.create_user_id =tb.user_id
+        where ta.batch_id =#{batchId}
+        <if test="paramNameLike != null">
+            and ta.judge_name like '%${paramNameLike}%'
+        </if>
+    </select>
+
+    <select id="getFileByProjectStageIdDao" resultType="cn.nebulaedata.pojo.ProjectFilePojo">
+        select ta.*, tb.file_class
+        from hf_project_batch_file ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.file_uuid
+        where ta.project_stage_id = #{projectStageId}
+    </select>
+    <select id="getFileLVByProjectStageIdDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select ta.file_name label, ta.file_uuid value
+        from hf_project_batch_file ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.file_uuid
+        where ta.project_stage_id = #{projectStageId}
+          and tb.file_class = '3'
+    </select>
+    <select id="getBidFileByProjectStageIdDao" resultType="cn.nebulaedata.pojo.ProjectFilePojo">
+        select ta.*
+        from hf_project_batch_file ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.file_uuid
+        where ta.project_stage_id = #{projectStageId}
+          and tb.file_class = '2'
+        limit 1
+    </select>
+
+    <select id="getContentAssessDao" resultType="cn.nebulaedata.pojo.HfContentAssessPojo">
+        select *
+        from hf_content_assess
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <select id="getJudgeParamsDao" resultType="cn.nebulaedata.pojo.DocParamsPojo">
+        select DISTINCT ta.file_uuid, ta.params_uuid, ta.params_name, ta.params_text, ta.params_type_id
+        from hf_content_params ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.file_uuid
+                               and ta.file_version_id = tb.file_version_id
+        where ta.file_uuid in ('${fileUuidListStr}')
+          and ta.params_uuid in ('${judgeParamsIdListStr}')
+          and tb.file_version_id is not null
+    </select>
+
+    <select id="getContentParamListDao" resultType="cn.nebulaedata.pojo.DocParamsPojo">
+        select ta.*
+        from hf_content_params ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.file_uuid
+                               and ta.file_version_id = tb.file_version_id
+        where ta.file_uuid = #{fileUuid}
+          and tb.file_version_id is not null
+    </select>
+    <select id="getContentTagListDao" resultType="cn.nebulaedata.pojo.TagPojo">
+        select ta.*
+        from hf_tag ta
+                 left join docframe_file_index tb
+                           on ta.file_uuid = tb.file_uuid
+                               and ta.file_version_id = tb.file_version_id
+        where ta.file_uuid = #{fileUuid}
+          and ta.type_id = '5'
+          and tb.file_version_id is not null
+    </select>
+
+    <select id="getCompanyUseFileListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        <!--        select ta.*,-->
+        <!--        tb.file_type_workflow,-->
+        <!--        tc.user_name createUserName,-->
+        <!--        case when ta.file_class !='1' and td.is_finish = '0' then '编制中'-->
+        <!--        when ta.file_class !='1' and td.is_finish = '1' then '已提交'-->
+        <!--        when ta.file_class='1' and te.file_uuid is null then '已发布'-->
+        <!--        when ta.file_class='1' and te.file_uuid is not null then '草稿'-->
+        <!--        else '' end as showStatus,-->
+        <!--        td.file_version_name-->
+        <!--        from docframe_file_index  ta-->
+        <!--        left join hf_file_type_di tb-->
+        <!--        on ta.file_type_id = tb.file_type_id-->
+        <!--        left join docframe_user tc-->
+        <!--        on ta.create_user_id = tc.user_id-->
+        <!--        left join docframe_file_version_index td-->
+        <!--        on ta.file_uuid=td.file_uuid-->
+        <!--        and ta.file_version_id=td.file_version_id-->
+        <!--        left join docframe_file_version_index te-->
+        <!--        on ta.file_uuid=te.file_uuid-->
+        <!--        and te.is_draft='1'-->
+        <!--        where ta.file_uuid in (-->
+        <!--        select file_parent_id from (-->
+        <!--        select file_parent_id-->
+        <!--        from docframe_file_index-->
+        <!--        where 1=1-->
+        <!--        and file_parent_id is not null-->
+        <!--        and file_class='1'-->
+        <!--        and main_file_uuid is null-->
+        <!--        and main_file_uuid2 is null-->
+        <!--        group by file_parent_id-->
+        <!--        order by count(1) desc-->
+        <!--        <if test="limit != null">-->
+        <!--            limit ${limit}-->
+        <!--        </if>-->
+        <!--        <if test="limit == null">-->
+        <!--            limit 10-->
+        <!--        </if>-->
+        <!--        ) ta)-->
+        <!--        从文库创建文件 20230801-->
+        select ta.file_uuid,ta.file_version_id,
+        tc.include_user_list,tc.suit_bid_method,tc.create_user_id,tc.update_user_id,tc.file_name,tc.file_type_id,tc.file_type_name,tc.file_parent_id,tc.is_root_file,tc.file_status,tc.ancestors_file_uuid,tc.create_time,tc.update_time,tc.file_class,tc.file_company_id,tc.file_label_list,tc.file_use_range_id,tc.file_use_range_name,tc.file_use_range_text,tc.file_desc,tc.main_file_uuid,tc.main_file_version_id,tc.main_file_uuid2,tc.main_file_version_id2,tc.suit_role,tc.suit_type,tc.suit_user,tc.suit_way,tc.template_type_id,
+        tb.file_version_name,td.user_name createUserName,te.useCnt
+        from hf_file_library ta
+        left join docframe_file_version_index tb
+        on ta.file_uuid = tb.file_uuid
+        and ta.file_version_id = tb.file_version_id
+        left join docframe_file_index tc
+        on ta.file_uuid=tc.file_uuid
+        left join docframe_user td
+        on tc.create_user_id=td.user_id
+        left join (
+        select file_parent_id,count(1) useCnt
+        from docframe_file_index
+        where file_class='2'
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+        and file_status = '1'
+        group by file_parent_id
+        ) te
+        on ta.file_uuid=te.file_parent_id
+        where ta.file_status='online'
+        and tc.file_class = '1'
+        <!--        <if test="paramNameLike != null">-->
+        <!--            and tc.file_name like '%${paramNameLike}%'-->
+        <!--        </if>-->
+        <!--        <if test="fileTypeId != null">-->
+        <!--            and tc.file_type_id = #{fileTypeId}-->
+        <!--        </if>-->
+        order by cast(te.useCnt as signed) desc,ta.create_time desc
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+        <if test="limit == null">
+            limit 15
+        </if>
+    </select>
+
+    <select id="syncFileIndexDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        <!--        select-->
+        <!--        #{fileUuid} file_uuid,-->
+        <!--        #{includeUserList} include_user_list,-->
+        <!--        suit_role,-->
+        <!--        suit_type,-->
+        <!--        suit_user,-->
+        <!--        suit_way,-->
+        <!--        suit_bid_method,-->
+        <!--        #{createUserId} create_user_id,-->
+        <!--        #{createUserId} update_user_id,-->
+        <!--        #{fileName} file_name,-->
+        <!--        #{fileTypeId} file_type_id,-->
+        <!--        #{fileTypeName} file_type_name,-->
+        <!--        #{fileVersionId} file_version_id,-->
+        <!--        null file_parent_id,-->
+        <!--        '1' is_root_file,-->
+        <!--        '81' file_status,-->
+        <!--        ancestors_file_uuid,-->
+        <!--        #{createTime} create_time,-->
+        <!--        file_class,-->
+        <!--        file_company_id,-->
+        <!--        #{fileLabelList} file_label_list,-->
+        <!--        #{fileUseRangeName} file_use_range_name,-->
+        <!--        #{fileDesc} file_desc,-->
+        <!--        template_type_id,-->
+        <!--        folder_id-->
+        <!--        from docframe_file_index-->
+        <!--        where file_uuid=#{fileParentId}-->
+        <!--        and file_version_id=#{oldFileVersionId}-->
+        select *
+        from docframe_file_index
+        where file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+    </select>
+
+    <select id="syncFileVersionDao" resultType="cn.nebulaedata.pojo.DocFileVerIndexPojo">
+        <!--        select-->
+        <!--        #{fileUuid} file_uuid,-->
+        <!--        #{fileVersionId} file_version_id,-->
+        <!--        #{fileVersionName} file_version_name,-->
+        <!--        #{createTime} create_time,-->
+        <!--        file_version_desc,-->
+        <!--        parents_version_id,-->
+        <!--        is_root_version,-->
+        <!--        #{createUserId} create_user_id,-->
+        <!--        #{createUserId} update_user_id,-->
+        <!--        is_draft,-->
+        <!--        version_status,-->
+        <!--        version_info,-->
+        <!--        confirm_user_id-->
+        <!--        from docframe_file_version_index-->
+        <!--        where file_uuid=#{fileParentId}-->
+        <!--        and file_version_id=#{oldFileVersionId}-->
+        select *
+        from docframe_file_version_index
+        where file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+    </select>
+
+    <select id="syncFileOutlineDao" resultType="cn.nebulaedata.pojo.OutLinePojo">
+        select *
+        from hf_model_outline
+        where file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+        <!--        order by cast(outline_order as SIGNED) asc-->
+    </select>
+
+    <select id="syncFileContentDao" resultType="cn.nebulaedata.pojo.ContentPojo">
+        select *
+        from hf_model_content
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </select>
+
+    <select id="syncDeriveContentParamDao" resultType="cn.nebulaedata.pojo.DocParamsPojo">
+        <!--        select-->
+        <!--        uuid,-->
+        <!--        params_uuid,-->
+        <!--        params_text,-->
+        <!--        #{fileUuid} file_uuid,-->
+        <!--        #{fileVersionId} file_version_id,-->
+        <!--        outline_id,-->
+        <!--        write_user_id,-->
+        <!--        #{createTime} create_time,-->
+        <!--        #{createUserId} create_user_id,-->
+        <!--        create_company_id,-->
+        <!--        params_name,-->
+        <!--        params_desc,-->
+        <!--        params_type_id,-->
+        <!--        params_use_scene_id,-->
+        <!--        params_group_id,-->
+        <!--        is_necessary,-->
+        <!--        is_under_line,-->
+        <!--        data_source,-->
+        <!--        params_range,-->
+        <!--        params_columns,-->
+        <!--        matrix_display,-->
+        <!--        matrix_mode,-->
+        <!--        params_classify,-->
+        <!--        show_text,-->
+        <!--        static_params_uuid,-->
+        <!--        is_del,-->
+        <!--        style_id,-->
+        <!--        unit,-->
+        <!--        remark,-->
+        <!--        is_init,-->
+        <!--        params_use_saturation,-->
+        <!--        default_value-->
+        <!--        from hf_content_params-->
+        <!--        where 1=1-->
+        <!--        and file_uuid=#{fileParentId}-->
+        <!--        and file_version_id=#{oldFileVersionId}-->
+        <!--        and is_del='0'-->
+        select *
+        from hf_content_params
+        where 1=1
+        and file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+        and is_del='0'
+    </select>
+
+    <select id="syncDeriveContentTagDao" resultType="cn.nebulaedata.pojo.TagPojo">
+        <!--        select-->
+        <!--        tag_id,-->
+        <!--        type_id,-->
+        <!--        tag_content,-->
+        <!--        #{fileUuid} file_uuid,-->
+        <!--        #{fileVersionId} file_version_id,-->
+        <!--        outline_id,-->
+        <!--        law_id,-->
+        <!--        words_uuid,-->
+        <!--        bookmark_uuid,-->
+        <!--        #{createUserId} create_user_id,-->
+        <!--        is_del,-->
+        <!--        use_is_del,-->
+        <!--        #{createTime} create_time-->
+        <!--        from hf_tag-->
+        <!--        where 1=1-->
+        <!--        and file_uuid=#{fileParentId}-->
+        <!--        and file_version_id=#{oldFileVersionId}-->
+        <!--        and is_del='0'-->
+        select *
+        from hf_tag
+        where 1=1
+        and file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+        and is_del='0'
+    </select>
+
+    <select id="syncDeriveContentBookmarkDao" resultType="cn.nebulaedata.pojo.BookmarkPojo">
+        <!--        select-->
+        <!--        bookmark_uuid,-->
+        <!--        bookmark_name,-->
+        <!--        bookmark_desc,-->
+        <!--        #{fileUuid} file_uuid,-->
+        <!--        #{fileVersionId} file_version_id,-->
+        <!--        outline_id,-->
+        <!--        #{createUserId} create_user_id-->
+        <!--        from hf_bookmark-->
+        <!--        where 1=1-->
+        <!--        and file_uuid=#{fileParentId}-->
+        <!--        and file_version_id=#{oldFileVersionId}-->
+        <!--        and is_del='0'-->
+        select *
+        from hf_bookmark
+        where 1=1
+        and file_uuid=#{fileUuid}
+        and file_version_id=#{fileVersionId}
+        and is_del='0'
+    </select>
+
+    <select id="syncDeriveFileAssessDao" resultType="cn.nebulaedata.pojo.HfContentAssessPojo">
+        select *
+        from hf_content_assess
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <select id="syncDeriveFileAssessElementDao" resultType="cn.nebulaedata.pojo.HfContentAssessElementPojo">
+        select *
+        from hf_content_assess_element
+        where file_uuid = #{fileUuid}
+    </select>
+
+    <insert id="uploadSyncFileIndexDao">
+        insert into docframe_file_index
+        (file_uuid, include_user_list, suit_role, suit_type, suit_user, suit_way, suit_bid_method, create_user_id,
+         update_user_id, file_name, file_type_id, file_type_name, file_version_id, file_parent_id, is_root_file,
+         file_status, ancestors_file_uuid, file_class, file_company_id, file_label_list, file_use_range_name, file_desc,
+         template_type_id)
+        values (#{fileUuid}, #{includeUserList}, #{suitRole}, #{suitType}, #{suitUser}, #{suitWay}, #{suitBidMethod},
+                #{createUserId}, #{updateUserId}, #{fileName}, #{fileTypeId}, #{fileTypeName}, #{fileVersionId},
+                #{fileParentId}, #{isRootFile}, #{fileStatus}, #{ancestorsFileUuid}, #{fileClass}, #{fileCompanyId},
+                #{fileLabelList}, #{fileUseRangeName}, #{fileDesc}, #{templateTypeId})
+    </insert>
+
+    <insert id="uploadSyncFileVerIndexDao">
+        insert into docframe_file_version_index
+        (file_uuid, file_version_id, file_version_name, file_version_desc, parents_version_id, is_root_version,
+         create_user_id, update_user_id, is_draft, version_status, version_info, confirm_user_id)
+        values (#{fileUuid}, #{fileVersionId}, #{fileVersionName}, #{fileVersionDesc}, #{parentsVersionId},
+                #{isRootVersion}, #{createUserId}, #{updateUserId}, #{isDraft}, #{versionStatus}, #{versionInfo},
+                #{confirmUserId})
+    </insert>
+
+    <insert id="uploadSyncFileOutlineDao">
+        insert into hf_model_outline
+        (outline_id,outline_text,file_uuid,file_version_id,outline_father_id,outline_order,outline_level,outline_property,outline_replace_group_id,color,is_necessary)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.outlineId},#{list.outlineText},#{list.fileUuid},#{list.fileVersionId},#{list.outlineFatherId},#{list.outlineOrder},#{list.outlineLevel},#{list.outlineProperty},#{list.outlineReplaceGroupId},#{list.color},#{list.isNecessary})
+        </foreach>
+    </insert>
+
+    <insert id="uploadSyncFileContentDao">
+        insert into hf_model_content
+        (content_id,content_text,outline_id,file_uuid,file_version_id)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.contentId},#{list.contentText},#{list.outlineId},#{list.fileUuid},#{list.fileVersionId})
+        </foreach>
+    </insert>
+
+    <insert id="uploadSyncFileParamsDao">
+        insert into hf_content_params
+        (uuid,params_uuid,params_choose,params_text,last_params_choose,last_params_text,file_uuid,file_version_id,outline_id,write_user_id,create_user_id,create_company_id,params_name,params_desc,params_type_id,params_use_scene_id,params_group_id,is_necessary,is_under_line,data_source,params_range,params_columns,matrix_display,matrix_mode,params_classify,show_text,static_params_uuid,is_del,style_id,unit,remark,is_init,params_use_saturation,default_value)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.uuid},#{list.paramsUuid},#{list.paramsChoose},#{list.paramsText},#{list.lastParamsChoose},#{list.lastParamsText},#{list.fileUuid},#{list.fileVersionId},#{list.outlineId},#{list.writeUserId},#{list.createUserId},#{list.createCompanyId},#{list.paramsName},#{list.paramsDesc},#{list.paramsTypeId},#{list.paramsUseSceneId},#{list.paramsGroupId},#{list.isNecessary},#{list.isUnderLine},#{list.dataSource},#{list.paramsRange},#{list.paramsColumns},#{list.matrixDisplay},#{list.matrixMode},#{list.paramsClassify},#{list.showText},#{list.staticParamsUuid},'0',#{list.styleId},#{list.unit},#{list.remark},#{list.isInit},#{list.paramsUseSaturation},#{list.defaultValue})
+        </foreach>
+    </insert>
+
+    <insert id="uploadSyncFileTagsDao">
+        insert into hf_tag
+        (tag_id,type_id,tag_content,file_uuid,file_version_id,outline_id,law_id,words_uuid,bookmark_uuid,create_user_id,is_del,use_is_del,tag_name)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.tagId},#{list.typeId},#{list.tagContent},#{list.fileUuid},#{list.fileVersionId},#{list.outlineId},#{list.lawId},#{list.wordsUuid},#{list.bookmarkUuid},#{list.createUserId},'0',#{list.useIsDel},#{list.tagName})
+        </foreach>
+    </insert>
+
+    <insert id="uploadSyncFileBookmarksDao">
+        insert into hf_bookmark
+        (bookmark_uuid,bookmark_name,bookmark_desc,file_uuid,file_version_id,outline_id,create_user_id,is_del)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.bookmarkUuid},#{list.bookmarkName},#{list.bookmarkDesc},#{list.fileUuid},#{list.fileVersionId},#{list.outlineId},#{list.createUserId},'0')
+        </foreach>
+    </insert>
+
+    <insert id="uploadSyncFileAssessDao">
+        insert into hf_content_assess
+        (file_uuid, assess_method, assess_model_list, assess_detailed_model_list, score_rat, price_assess_plan,
+         create_user_id)
+        values (#{list.fileUuid}, #{list.assessMethod}, #{list.assessModelList}, #{list.assessDetailedModelList},
+                #{list.scoreRat}, #{list.priceAssessPlan}, #{list.createUserId})
+    </insert>
+
+    <insert id="uploadSyncFileAssessElementsDao">
+        insert into hf_content_assess_element
+        (file_uuid,tab_uuid,element_id,element_type,element_yinsu,element_standard,element_standard_extra,quantization_yinsu,quantization_standard,quantization_standard_extra,quantization_rules,gradation,threshold_value,params_id_list,assess_id,order,element_type_order,create_user_id)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.fileUuid},#{list.tabUuid},#{list.elementId},#{list.elementType},#{list.elementYinsu},#{list.elementStandard},#{list.elementStandardExtra},#{list.quantizationYinsu},#{list.quantizationStandard},#{list.quantizationStandardExtra},#{list.quantizationRules},#{list.gradation},#{list.thresholdValue},#{list.paramsIdList},#{list.assessId},#{list.order},#{list.elementTypeOrder},#{list.createUserId})
+        </foreach>
+    </insert>
+
+    <select id="checkOptionsDao" resultType="Integer">
+        select count(1)
+        from hf_options_di
+        where 1 = 1
+          and is_del = '0'
+          and type = #{type}
+          and label = #{label}
+    </select>
+
+    <select id="getOptionsTypeListDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select distinct type value,type_desc label
+        from hf_options_di
+        where 1=1
+        <if test="flag == null">
+            and is_show = '1'
+        </if>
+        order by type
+    </select>
+
+    <select id="getOptionsListDao" resultType="cn.nebulaedata.pojo.OptionsPojo">
+        select *
+        from hf_options_di
+        where 1=1
+        <if test="type != null">
+            and type = #{type}
+        </if>
+        and is_del = '0'
+        and is_show = '1'
+        <if test="paramNameLike != null">
+            and label like '%${paramNameLike}%'
+        </if>
+        order by type,create_time desc
+    </select>
+
+    <insert id="addOptionsDao">
+        insert into hf_options_di
+            (id, label, value, type, type_desc, is_del)
+        values (#{id}, #{label}, #{value}, #{type}, #{typeDesc}, #{isDel})
+    </insert>
+
+    <update id="delOptionsDao">
+        update hf_options_di
+        set is_del = '1'
+        where id = #{id}
+    </update>
+
+    <insert id="createDmDbDao">
+        insert into hf_dm_db
+            (db_id, db_name, db_desc, create_user_id)
+        values (#{dbId}, #{dbName}, #{dbDesc}, #{createUserId})
+    </insert>
+    <insert id="createDmDbInFileDao">
+        insert into hf_dm_content_db
+            (db_id, db_name, db_desc, file_uuid, file_version_id, create_user_id)
+        values (#{dbId}, #{dbName}, #{dbDesc}, #{fileUuid}, #{fileVersionId}, #{createUserId})
+    </insert>
+
+    <select id="checkDmDbNameDao" resultType="Integer">
+        select count(1)
+        from hf_dm_db
+        where db_name = #{dbName}
+        <if test="userId != null">
+            and create_user_id = #{userId}
+        </if>
+        <if test="dbId != null">
+            and db_id != #{dbId}
+        </if>
+    </select>
+    <select id="checkDmDbNameInFileDao" resultType="Integer">
+        select count(1)
+        from hf_dm_content_db
+        where db_name = #{dbName}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        <if test="dbId != null">
+            and db_id != #{dbId}
+        </if>
+    </select>
+
+    <delete id="delDmDbDao">
+        delete
+        from hf_dm_db
+        where db_id = #{dbId}
+    </delete>
+    <delete id="delDmDbInFileDao">
+        delete
+        from hf_dm_content_db
+        where db_id = #{dbId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </delete>
+
+    <update id="chgDmDbDao">
+        update hf_dm_db
+        set db_name = #{dbName},
+            db_desc = #{dbDesc}
+        where db_id = #{dbId}
+    </update>
+    <update id="chgDmDbInFileDao">
+        update hf_dm_content_db
+        set db_name = #{dbName},
+            db_desc = #{dbDesc}
+        where db_id = #{dbId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </update>
+
+    <select id="getDmDbListDao" resultType="cn.nebulaedata.pojo.HfDmDb">
+        select ta.db_id `key`,ta.db_name title,ta.db_desc `desc`,'database' type,ta.*,tb.user_name
+        createUserName,ta.db_id value,ta.db_name label
+        from hf_dm_db ta
+        left join docframe_user tb
+        on ta.create_user_id = tb.user_id
+        where 1=1
+        and ta.create_user_id = #{createUserId}
+        <if test="paramNameLike != null">
+            and ta.db_name like '%${paramNameLike}%'
+        </if>
+        order by cast(ta.`order` as signed), ta.create_time desc
+    </select>
+    <select id="getDmDbListInFileDao" resultType="cn.nebulaedata.pojo.HfDmDb">
+        select ta.db_id `key`,ta.db_name title,ta.db_desc `desc`,'database' type,ta.*,tb.user_name
+        createUserName,ta.db_id value,ta.db_name label
+        from hf_dm_content_db ta
+        left join docframe_user tb
+        on ta.create_user_id = tb.user_id
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        <if test="paramNameLike != null">
+            and ta.db_name like '%${paramNameLike}%'
+        </if>
+        order by cast(ta.`order` as signed), ta.create_time desc
+    </select>
+
+    <select id="getDmDbInfoDao" resultType="cn.nebulaedata.pojo.HfDmDb">
+        select db_id `key`, db_name title, db_desc `desc`, 'database' type
+        from hf_dm_db
+        where db_id = #{dbId}
+    </select>
+    <select id="getDmDbInfoInFileDao" resultType="cn.nebulaedata.pojo.HfDmDb">
+        select db_id `key`, db_name title, db_desc `desc`, 'database' type
+        from hf_dm_content_db
+        where db_id = #{dbId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </select>
+
+    <select id="getDmTableListDao" resultType="cn.nebulaedata.pojo.HfDmTable">
+        select ta.table_id   `key`,
+               ta.table_name title,
+               ta.table_desc `desc`,
+               'table'       type,
+               ta.db_id,
+               ta.show_pagination,
+               ta.ellipsis,
+               ta.table_id   value,
+               ta.table_name label,
+               ta.table_id,
+               ta.father_table_id
+        from hf_dm_table ta
+        where ta.create_user_id = #{createUserId}
+          and ta.is_del = '0'
+        order by cast(ta.`order` as signed),ta.create_time desc
+    </select>
+    <select id="getDmTableListInFileDao" resultType="cn.nebulaedata.pojo.HfDmTable">
+        select ta.table_id `key`,ta.table_name title,ta.table_desc `desc`,'table'
+        type,ta.db_id,ta.show_pagination,ta.ellipsis,ta.table_id value,ta.table_name
+        label,ta.table_id,ta.father_table_id
+        from hf_dm_content_table ta
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.is_del = '0'
+        and ta.file_uuid = #{fileUuid}
+        and ta.file_version_id = #{fileVersionId}
+        order by cast(ta.`order` as signed),ta.create_time desc
+    </select>
+
+    <update id="orderDmTableDao">
+        update hf_dm_table
+        set `order` = case table_id
+        <foreach collection="list" separator="" item="m">
+            when #{m.tableId} then #{m.order}
+        </foreach>
+        else `order`
+        end
+        where db_id = #{dbId}
+    </update>
+    <update id="orderDmTableInFileDao">
+        update hf_dm_content_table
+        set `order` = case table_id
+        <foreach collection="list" separator="" item="m">
+            when #{m.tableId} then #{m.order}
+        </foreach>
+        else `order`
+        end
+        where db_id = #{dbId}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </update>
+
+    <update id="orderDmDbDao">
+        update hf_dm_db
+        set `order` = case db_id
+        <foreach collection="list" separator="" item="m">
+            when #{m.dbId} then #{m.order}
+        </foreach>
+        else `order`
+        end
+        where 1=1
+    </update>
+    <update id="orderDmDbInFileDao">
+        update hf_dm_content_db
+        set `order` = case db_id
+        <foreach collection="list" separator="" item="m">
+            when #{m.dbId} then #{m.order}
+        </foreach>
+        else `order`
+        end
+        where 1=1
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </update>
+
+    <select id="getDmTableInfoDao" resultType="cn.nebulaedata.pojo.HfDmTable">
+        select *
+        from hf_dm_table
+        where table_id = #{tableId}
+          and is_del = '0'
+    </select>
+    <select id="getDmTableInfoInFileDao" resultType="cn.nebulaedata.pojo.HfDmTable">
+        select *
+        from hf_dm_content_table
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+          and is_del = '0'
+    </select>
+
+
+    <select id="checkDmTableNameDao" resultType="Integer">
+        select count(1)
+        from hf_dm_table
+        where table_name = #{tableName}
+        and is_del = '0'
+        <if test="userId != null">
+            and create_user_id = #{userId}
+        </if>
+        <if test="dbId != null">
+            and db_id = #{dbId}
+        </if>
+        <if test="tableId != null">
+            and table_id != #{tableId}
+        </if>
+    </select>
+    <select id="checkDmTableNameInFileDao" resultType="Integer">
+        select count(1)
+        from hf_dm_content_table
+        where table_name = #{tableName}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        and is_del = '0'
+        <if test="dbId != null">
+            and db_id = #{dbId}
+        </if>
+        <if test="tableId != null">
+            and table_id != #{tableId}
+        </if>
+    </select>
+
+    <insert id="createDmTableDao">
+        insert into hf_dm_table
+        (table_id, table_name, table_desc, db_id, create_user_id, father_table_id, father_filter, father_group)
+        values (#{tableId}, #{tableName}, #{tableDesc}, #{dbId}, #{createUserId}, #{fatherTableId}, #{fatherFilter},
+                #{fatherGroup})
+    </insert>
+    <insert id="createDmTableInFileDao">
+        insert into hf_dm_content_table
+        (table_id, table_name, table_desc, db_id, file_uuid, file_version_id, create_user_id, father_table_id,
+         father_filter, father_group)
+        values (#{tableId}, #{tableName}, #{tableDesc}, #{dbId}, #{fileUuid}, #{fileVersionId}, #{createUserId},
+                #{fatherTableId}, #{fatherFilter}, #{fatherGroup})
+    </insert>
+
+    <update id="delDmTableDao">
+        update hf_dm_table
+        set is_del = '1'
+        where table_id = #{tableId}
+    </update>
+    <update id="delDmTableInFileDao">
+        update hf_dm_content_table
+        set is_del = '1'
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </update>
+
+    <update id="chgDmTableDao">
+        update hf_dm_table
+        set table_name = #{tableName},
+            table_desc = #{tableDesc}
+        where table_id = #{tableId}
+    </update>
+    <update id="chgDmTableInFileDao">
+        update hf_dm_content_table
+        set table_name = #{tableName},
+            table_desc = #{tableDesc}
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </update>
+
+    <update id="updateViewConditionDao">
+        update hf_dm_table
+        set create_time = create_time
+        <if test="fatherFilter != null">
+            ,father_filter = #{fatherFilter}
+        </if>
+        <if test="fatherGroup != null">
+            ,father_group = #{fatherGroup}
+        </if>
+        where table_id = #{key}
+    </update>
+    <update id="updateViewConditionInFileDao">
+        update hf_dm_content_table
+        set create_time = create_time
+        <if test="fatherFilter != null">
+            ,father_filter = #{fatherFilter}
+        </if>
+        <if test="fatherGroup != null">
+            ,father_group = #{fatherGroup}
+        </if>
+        where table_id = #{key}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </update>
+
+
+    <insert id="addDmTableColumnsDao">
+        insert into hf_dm_columns
+        (table_id, `key`, title, data_index, field_type, `options`, unit, `order`, default_value, required, kind,
+         formula, create_user_id)
+        values (#{tableId}, #{key}, #{title}, #{dataIndex}, #{fieldType}, #{options}, #{unit}, #{order},
+                #{defaultValue}, #{required}, #{kind}, #{formula}, #{createUserId})
+    </insert>
+    <insert id="addDmTableColumnsInFileDao">
+        insert into hf_dm_content_columns
+        (table_id, `key`, title, data_index, field_type, `options`, unit, `order`, default_value, required, kind,
+         formula, file_uuid, file_version_id, create_user_id)
+        values (#{tableId}, #{key}, #{title}, #{dataIndex}, #{fieldType}, #{options}, #{unit}, #{order},
+                #{defaultValue}, #{required}, #{kind}, #{formula}, #{fileUuid}, #{fileVersionId}, #{createUserId})
+    </insert>
+
+    <select id="getNowColumnsOrderDao" resultType="Integer">
+        select CAST(`order` AS signed) `order`
+        from hf_dm_columns
+        where table_id = #{tableId}
+        order by CAST(`order` AS signed) desc
+        limit 1
+    </select>
+    <select id="getNowColumnsOrderInFileDao" resultType="Integer">
+        select CAST(`order` AS signed) `order`
+        from hf_dm_content_columns
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+        order by CAST(`order` AS signed) desc
+        limit 1
+    </select>
+
+    <delete id="delDmTableColumnsDao">
+        delete
+        from hf_dm_columns
+        where `key` = #{key}
+          and table_id = #{tableId}
+    </delete>
+    <delete id="delDmTableColumnsInFileDao">
+        delete
+        from hf_dm_content_columns
+        where `key` = #{key}
+          and table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </delete>
+    <delete id="delDmTableColumns2Dao">
+        delete from hf_dm_columns
+        where 1=1
+        and table_id = #{tableId}
+        and `key` in (
+        <foreach collection="keyList" separator=" , " item="columnsId">
+            #{columnsId}
+        </foreach>
+        )
+    </delete>
+    <delete id="delDmTableColumns2InFileDao">
+        delete from hf_dm_content_columns
+        where 1=1
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        and table_id = #{tableId}
+        and `key` in (
+        <foreach collection="keyList" separator=" , " item="columnsId">
+            #{columnsId}
+        </foreach>
+        )
+    </delete>
+
+    <update id="chgDmTableColumnsDao">
+        update hf_dm_columns
+        set create_time = create_time
+        <if test="title != null">
+            ,title = #{title}
+        </if>
+        <if test="fieldType != null">
+            ,field_type = #{fieldType}
+        </if>
+        <if test="options != null">
+            ,`options` = #{options}
+        </if>
+        <if test="unit != null">
+            ,unit = #{unit}
+        </if>
+        <if test="defaultValue != null">
+            ,default_value = #{defaultValue}
+        </if>
+        <if test="required != null">
+            ,required = #{required}
+        </if>
+        <if test="kind != null">
+            ,kind = #{kind}
+        </if>
+        <if test="formula != null">
+            ,formula = #{formula}
+        </if>
+        <if test="matchType != null">
+            ,match_type = #{matchType}
+        </if>
+        <if test="matchType == null">
+            ,match_type = null
+        </if>
+        <if test="matchDbId != null">
+            ,match_db_id = #{matchDbId}
+        </if>
+        <if test="matchDbId == null">
+            ,match_db_id = null
+        </if>
+        <if test="matchFolderId != null">
+            ,match_folder_id = #{matchFolderId}
+        </if>
+        <if test="matchFolderId == null">
+            ,match_folder_id = null
+        </if>
+        where `key` = #{key}
+        and table_id = #{tableId}
+    </update>
+    <update id="chgDmTableColumnsInFileDao">
+        update hf_dm_content_columns
+        set create_time = create_time
+        <if test="title != null">
+            ,title = #{title}
+        </if>
+        <if test="fieldType != null">
+            ,field_type = #{fieldType}
+        </if>
+        <if test="options != null">
+            ,`options` = #{options}
+        </if>
+        <if test="unit != null">
+            ,unit = #{unit}
+        </if>
+        <if test="defaultValue != null">
+            ,default_value = #{defaultValue}
+        </if>
+        <if test="required != null">
+            ,required = #{required}
+        </if>
+        <if test="kind != null">
+            ,kind = #{kind}
+        </if>
+        <if test="formula != null">
+            ,formula = #{formula}
+        </if>
+        <if test="matchType != null">
+            ,match_type = #{matchType}
+        </if>
+        <if test="matchType == null">
+            ,match_type = null
+        </if>
+        <if test="matchDbId != null">
+            ,match_db_id = #{matchDbId}
+        </if>
+        <if test="matchDbId == null">
+            ,match_db_id = null
+        </if>
+        <if test="matchFolderId != null">
+            ,match_folder_id = #{matchFolderId}
+        </if>
+        <if test="matchFolderId == null">
+            ,match_folder_id = null
+        </if>
+        where `key` = #{key}
+        and table_id = #{tableId}
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </update>
+
+
+    <select id="getDmTableColumnsInfoDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select ta.*, ta.data_index value, ta.title label
+        from hf_dm_columns ta
+        where table_id = #{tableId}
+          and `key` = #{columnsId}
+    </select>
+    <select id="getDmTableColumnsInfoInFileDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select ta.*, ta.data_index value, ta.title label
+        from hf_dm_content_columns ta
+        where table_id = #{tableId}
+          and `key` = #{columnsId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </select>
+
+
+    <select id="getDmTableColumnsListDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select ta.*, ta.data_index value, ta.title label
+        from hf_dm_columns ta
+        where table_id = #{tableId}
+        order by cast(`order` as signed) asc, create_time desc
+    </select>
+    <select id="getDmTableColumnsListInFileDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select ta.*,ta.data_index value,ta.title label
+        from hf_dm_content_columns ta
+        where 1=1
+        <if test="tableId != null">
+            and table_id = #{tableId}
+        </if>
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        order by cast(`order` as signed) asc,create_time desc
+    </select>
+
+    <insert id="addDmDataDao">
+        insert into hf_dm_data
+            (data_id, data_content, table_id, `order`, create_user_id)
+        values (#{dataId}, #{dataContent}, #{tableId}, #{order}, #{createUserId})
+    </insert>
+    <!--    <insert id="addDmDataInFileDao">-->
+    <!--        insert into hf_dm_content_data-->
+    <!--        (data_id,data_content,table_id,`order`,file_uuid,file_version_id,create_user_id)-->
+    <!--        values-->
+    <!--        (#{dataId},#{dataContent},#{tableId},#{order},#{fileUuid},#{fileVersionId},#{createUserId})-->
+    <!--    </insert>-->
+
+    <select id="getNowDataOrderDao" resultType="Integer">
+        select CAST(`order` AS signed) `order`
+        from hf_dm_data
+        where table_id = #{tableId}
+        order by CAST(`order` AS signed) desc
+        limit 1
+    </select>
+    <!--    <select id="getNowDataOrderInFileDao" resultType="Integer">-->
+    <!--        select CAST(`order` AS signed) `order`-->
+    <!--        from hf_dm_content_data-->
+    <!--        where table_id = #{tableId}-->
+    <!--        and file_uuid = #{fileUuid}-->
+    <!--        and file_version_id = #{fileVersionId}-->
+    <!--        order by CAST(`order` AS signed) desc-->
+    <!--        limit 1-->
+    <!--    </select>-->
+
+    <delete id="delDmDataDao">
+        delete
+        from hf_dm_data
+        where data_id = #{dataId}
+          and table_id = #{tableId}
+    </delete>
+    <!--    <delete id="delDmDataInFileDao">-->
+    <!--        delete from hf_dm_content_data-->
+    <!--        where data_id = #{dataId}-->
+    <!--        and table_id = #{tableId}-->
+    <!--        and file_uuid = #{fileUuid}-->
+    <!--        and file_version_id = #{fileVersionId}-->
+    <!--    </delete>-->
+
+
+    <update id="chgDmDataDao">
+        update hf_dm_data
+        set data_content = #{dataContent}
+        where data_id = #{dataId}
+          and table_id = #{tableId}
+    </update>
+    <!--    <update id="chgDmDataInFileDao">-->
+    <!--        update hf_dm_content_data-->
+    <!--        set data_content = #{dataContent}-->
+    <!--        where data_id = #{dataId}-->
+    <!--        and table_id = #{tableId}-->
+    <!--        and file_uuid = #{fileUuid}-->
+    <!--        and file_version_id = #{fileVersionId}-->
+    <!--    </update>-->
+
+    <!--    <update id="chgDmDataMatchInfoDao">-->
+    <!--        update hf_dm_data-->
+    <!--        set match_result = #{matchResult}-->
+    <!--        where data_id = #{dataId}-->
+    <!--          and table_id = #{tableId}-->
+    <!--    </update>-->
+
+    <select id="getDmDataListDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        <!--无上卷-->
+        select ta.data_id `key`,ta.*
+        from hf_dm_data ta
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.table_id = #{tableId}
+        <if test="sql != null">
+            and (${sql})
+        </if>
+        <if test="sortBySql != null">
+            ${sortBySql}
+        </if>
+        <if test="sortBySql == null">
+            order by cast(ta.`order` as signed) asc, ta.create_time asc
+        </if>
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+    <select id="getDmDataListGroupByDao" resultType="Map">
+        <!--上卷-->
+        select '1' as `key`,${groupBySqlWithName} ${groupByFunctionsSql}
+        from hf_dm_data ta
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.table_id = #{tableId}
+        <if test="sql != null">
+            and (${sql})
+        </if>
+        <!--        and (${groupBySqlNotNull})-->
+        group by ${groupBySql}
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+    <!--    <select id="getDmDataListInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">-->
+    <!--        &lt;!&ndash;无上卷&ndash;&gt;-->
+    <!--        select ta.data_id `key`,ta.*-->
+    <!--        from hf_dm_content_data ta-->
+    <!--        where 1=1-->
+    <!--&lt;!&ndash;        and ta.create_user_id = #{createUserId}&ndash;&gt;-->
+    <!--        and ta.table_id = #{tableId}-->
+    <!--        and ta.file_uuid = #{fileUuid}-->
+    <!--        and ta.file_version_id = #{fileVersionId}-->
+    <!--        <if test="sql != null">-->
+    <!--            and (${sql})-->
+    <!--        </if>-->
+    <!--        <if test="sortBySql != null">-->
+    <!--            ${sortBySql}-->
+    <!--        </if>-->
+    <!--        <if test="sortBySql == null">-->
+    <!--            order by cast(ta.`order` as signed) asc, ta.create_time asc-->
+    <!--        </if>-->
+    <!--        <if test="limit != null">-->
+    <!--            limit ${limit}-->
+    <!--        </if>-->
+    <!--    </select>-->
+    <!--    <select id="getDmDataListInFileGroupByDao" resultType="Map">-->
+    <!--        &lt;!&ndash;上卷&ndash;&gt;-->
+    <!--        select '1' as `key` ,${groupBySqlWithName}  ${groupByFunctionsSql}-->
+    <!--        from hf_dm_content_data ta-->
+    <!--        where 1=1-->
+    <!--&lt;!&ndash;        and ta.create_user_id = #{createUserId}&ndash;&gt;-->
+    <!--        and ta.table_id = #{tableId}-->
+    <!--        and ta.file_uuid = #{fileUuid}-->
+    <!--        and ta.file_version_id = #{fileVersionId}-->
+    <!--        <if test="sql != null">-->
+    <!--            and (${sql})-->
+    <!--        </if>-->
+    <!--&lt;!&ndash;        and (${groupBySqlNotNull})&ndash;&gt;-->
+    <!--        group by ${groupBySql}-->
+    <!--        <if test="limit != null">-->
+    <!--            limit ${limit}-->
+    <!--        </if>-->
+    <!--    </select>-->
+
+    <select id="getDmDataIdListDao" resultType="String">
+        select ta.data_id
+        from hf_dm_data ta
+        where 1=1
+        <!--        and ta.create_user_id = #{createUserId}-->
+        and ta.table_id = #{tableId}
+        <if test="sql != null">
+            and (${sql})
+        </if>
+        <if test="sortBySql != null">
+            ${sortBySql}
+        </if>
+        <if test="sortBySql == null">
+            order by cast(ta.`order` as signed) asc, ta.create_time asc
+        </if>
+        <if test="limit != null">
+            limit ${limit}
+        </if>
+    </select>
+
+    <update id="orderDmDataDao">
+        ${sql}
+    </update>
+
+    <!--    <select id="getTotalKeysDao" resultType="String">-->
+    <!--        select ta.data_id `key`-->
+    <!--        from hf_dm_content_data ta-->
+    <!--        where 1=1-->
+    <!--        and ta.table_id = #{tableId}-->
+    <!--        and ta.file_uuid = #{fileUuid}-->
+    <!--        and ta.file_version_id = #{fileVersionId}-->
+    <!--        <if test="sql != null">-->
+    <!--            and (${sql})-->
+    <!--        </if>-->
+    <!--        order by cast(ta.`order` as signed) asc, ta.create_time asc-->
+    <!--        <if test="limit != null">-->
+    <!--            limit ${limit}-->
+    <!--        </if>-->
+    <!--    </select>-->
+
+    <!--    <select id="getNoSortDataInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">-->
+    <!--        select ta.data_id `key`,ta.*-->
+    <!--        from hf_dm_content_data ta-->
+    <!--        where 1=1-->
+    <!--        and ta.table_id = #{tableId}-->
+    <!--        and ta.file_uuid = #{fileUuid}-->
+    <!--        and ta.file_version_id = #{fileVersionId}-->
+    <!--        <if test="keyList != null">-->
+    <!--            and ta.data_id in (-->
+    <!--            <foreach collection="keyList" separator=" , " item="columnsId">-->
+    <!--                #{columnsId}-->
+    <!--            </foreach>-->
+    <!--            )-->
+    <!--            limit #{limit}-->
+    <!--        </if>-->
+    <!--    </select>-->
+
+    <select id="getDmDataTotalDao" resultType="Integer">
+        select count(1)
+        from hf_dm_data
+        where table_id = #{tableId}
+        <!--        and create_user_id = #{createUserId}-->
+    </select>
+    <!--    <select id="getDmDataTotalInFileDao" resultType="Integer">-->
+    <!--        select count(1)-->
+    <!--        from hf_dm_content_data-->
+    <!--        where table_id = #{tableId}-->
+    <!--        and file_uuid = #{fileUuid}-->
+    <!--        and file_version_id = #{fileVersionId}-->
+    <!--&lt;!&ndash;        and create_user_id = #{createUserId}&ndash;&gt;-->
+    <!--    </select>-->
+
+    <update id="updateDmTableColumnsOrderDao">
+        update hf_dm_columns
+        set `order`   = #{order},
+            `visible` = #{visible}
+        where `key` = #{key}
+          and table_id = #{tableId}
+    </update>
+    <update id="updateDmTableColumnsOrderInFileDao">
+        update hf_dm_content_columns
+        set `order`   = #{order},
+            `visible` = #{visible}
+        where `key` = #{key}
+          and table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </update>
+
+    <update id="chgPageStatusDao">
+        update hf_dm_table
+        set show_pagination = #{showPagination}
+        where table_id = #{tableId}
+    </update>
+    <update id="chgPageStatusInFileDao">
+        update hf_dm_content_table
+        set show_pagination = #{showPagination}
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </update>
+    <update id="chgEllipsisStatusDao">
+        update hf_dm_table
+        set ellipsis = #{ellipsis}
+        where table_id = #{tableId}
+    </update>
+    <update id="chgEllipsisStatusInFileDao">
+        update hf_dm_content_table
+        set ellipsis = #{ellipsis}
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </update>
+
+    <insert id="uploadHfDmColumnsDao">
+        insert into hf_dm_columns
+        (table_id,`key`,`title`,data_index,field_type,`options`,`unit`,`order`,create_user_id,create_time)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.tableId},#{list.key},#{list.title},#{list.dataIndex},#{list.fieldType},#{list.options},#{list.unit},#{list.order},#{list.createUserId},#{list.createTime})
+        </foreach>
+    </insert>
+    <insert id="uploadHfDmColumnsInFileDao">
+        insert into hf_dm_content_columns
+        (table_id,`key`,`title`,data_index,field_type,`options`,`unit`,`order`,file_uuid,file_version_id,create_user_id,create_time)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.tableId},#{list.key},#{list.title},#{list.dataIndex},#{list.fieldType},#{list.options},#{list.unit},#{list.order},#{fileUuid},#{fileVersionId},#{list.createUserId},#{list.createTime})
+        </foreach>
+    </insert>
+
+    <insert id="uploadHfDmDataDao">
+        insert into hf_dm_data
+        (data_id,data_content,table_id,`order`,create_user_id,create_time)
+        values
+        <foreach collection="lists" separator="," item="list">
+            (#{list.dataId},#{list.dataContent},#{list.tableId},#{list.order},#{list.createUserId},#{list.createTime})
+        </foreach>
+    </insert>
+    <!--    <insert id="uploadHfDmDataInFileDao">-->
+    <!--        insert into hf_dm_content_data-->
+    <!--        (data_id,data_content,table_id,`order`,file_uuid,file_version_id,create_user_id,create_time)-->
+    <!--        values-->
+    <!--        <foreach collection="lists" separator="," item="list">-->
+    <!--            (#{list.dataId},#{list.dataContent},#{list.tableId},#{list.order},#{fileUuid},#{fileVersionId},#{list.createUserId},#{list.createTime})-->
+    <!--        </foreach>-->
+    <!--    </insert>-->
+
+    <delete id="clearDmDataDao">
+        delete
+        from hf_dm_data
+        where table_id = #{tableId}
+    </delete>
+
+    <delete id="clearDmColumnsDao">
+        delete
+        from hf_dm_columns
+        where table_id = #{tableId}
+    </delete>
+    <delete id="clearDmColumnsInFileDao">
+        delete
+        from hf_dm_content_columns
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </delete>
+
+
+    <insert id="importDmTableDao">
+        insert into hf_dm_content_table
+        (table_id,table_name,table_desc,show_pagination,ellipsis,db_id,`order`,create_user_id,is_del,file_uuid,file_version_id,father_table_id,father_filter,father_group,source_table_id)
+        select
+        #{newTableId} table_id,
+        table_name,
+        <if test="desc == null">
+            table_desc,
+        </if>
+        <if test="desc != null">
+            #{desc},
+        </if>
+        show_pagination,
+        ellipsis,
+        #{databaseId} db_id,
+        `order`,
+        create_user_id,
+        '0' is_del,
+        #{fileUuid} file_uuid,
+        #{fileVersionId} file_version_id,
+        <if test="fatherTableId == null">
+            null father_table_id,
+        </if>
+        <if test="fatherTableId != null">
+            #{fatherTableId} father_table_id,
+        </if>
+        father_filter,
+        father_group,
+        table_id
+        from hf_dm_table
+        where table_id = #{tableId}
+        <!--        and create_user_id = #{userId}-->
+    </insert>
+
+    <insert id="importDmColumnsDao">
+        insert into hf_dm_content_columns
+        (table_id,`key`,title,data_index,field_type,options,`unit`,`order`,default_value,required,visible,kind,formula,match_type,match_db_id,match_folder_id,create_user_id,file_uuid,file_version_id)
+        select
+        #{newTableId} table_id,
+        `key`,
+        title,
+        data_index,
+        field_type,
+        options,
+        `unit`,
+        `order`,
+        default_value,
+        required,
+        visible,
+        kind,
+        formula,
+        match_type,
+        match_db_id,
+        match_folder_id,
+        #{userId} create_user_id,
+        #{fileUuid} file_uuid,
+        #{fileVersionId} file_version_id
+        from hf_dm_columns
+        where table_id = #{tableId}
+        <!--        and create_user_id = #{userId}-->
+    </insert>
+
+    <insert id="importDmColumnsResetMatchDao">
+        insert into hf_dm_content_columns
+        (table_id,`key`,title,data_index,field_type,options,`unit`,`order`,default_value,required,visible,kind,formula,match_type,match_db_id,match_folder_id,create_user_id,file_uuid,file_version_id)
+        select
+        #{newTableId} table_id,
+        `key`,
+        title,
+        data_index,
+        field_type,
+        options,
+        `unit`,
+        `order`,
+        default_value,
+        required,
+        visible,
+        kind,
+        formula,
+        match_type,
+        IF(match_type = 'table', #{matchDbId}, match_db_id) as match_db_id,
+        match_folder_id,
+        #{userId} create_user_id,
+        #{fileUuid} file_uuid,
+        #{fileVersionId} file_version_id
+        from hf_dm_columns
+        where table_id = #{tableId}
+        <!--        and create_user_id = #{userId}-->
+    </insert>
+
+    <select id="getDmViewListDao" resultType="String">
+        select table_id
+        from hf_dm_table
+        where father_table_id = #{tableId}
+          and is_del = '0'
+    </select>
+    <select id="getDmViewListInFileDao" resultType="String">
+        select table_id
+        from hf_dm_content_table
+        where father_table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+          and is_del = '0'
+    </select>
+
+    <delete id="clearTableColumnsDao">
+        delete
+        from hf_dm_content_columns
+        where file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+          and table_id = #{tableId}
+    </delete>
+
+    <insert id="createErrLogDao">
+        insert into hf_err_log
+        (uuid, error_type, href, browser, error, extra_info, user_id, create_user_id)
+        values (#{uuid}, #{errorType}, #{href}, #{browser}, #{error}, #{extraInfo}, #{userId}, #{createUserId})
+    </insert>
+
+    <insert id="copyDmTableDao">
+        insert into hf_dm_table
+        (table_id, table_name, table_desc, show_pagination, ellipsis, db_id, create_user_id, is_del)
+        select #{newTableId}   table_id,
+               #{newTableName} table_name,
+               table_desc,
+               show_pagination,
+               ellipsis,
+               #{dbId}         db_id,
+               #{userId}       create_user_id,
+               '0'             is_del
+        from hf_dm_table
+        where table_id = #{tableId}
+    </insert>
+    <insert id="copyDmTableInFileDao">
+        insert into hf_dm_content_table
+        (table_id, table_name, table_desc, show_pagination, ellipsis, db_id,`order`, create_user_id, is_del, file_uuid,
+         file_version_id, source_table_id)
+        select #{newTableId}   table_id,
+               #{newTableName} table_name,
+               table_desc,
+               show_pagination,
+               ellipsis,
+               #{dbId}         db_id,
+               `order`,
+               #{userId}       create_user_id,
+               '0'             is_del,
+               file_uuid,
+               file_version_id,
+               source_table_id
+        from hf_dm_content_table
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </insert>
+
+    <insert id="copyDmColumnsDao">
+        insert into hf_dm_columns
+        (table_id, `key`, title, data_index, field_type, `options`, `unit`, `order`, default_value, required, visible,
+         kind, formula, match_type, match_db_id, match_folder_id,
+         create_user_id)
+        select #{newTableId} table_id,
+               `key`,
+               title,
+               data_index,
+               field_type,
+               `options`,
+               `unit`,
+               `order`,
+               default_value,
+               required,
+               visible,
+               kind,
+               formula,
+               match_type,
+               match_db_id,
+               match_folder_id,
+               #{userId}     create_user_id
+        from hf_dm_columns
+        where table_id = #{tableId}
+    </insert>
+    <insert id="copyDmColumnsInFileDao">
+        insert into hf_dm_content_columns
+        (table_id, `key`, title, data_index, field_type, `options`, `unit`, `order`, default_value, required, visible,
+         kind, formula, match_type, match_db_id, match_folder_id,
+         create_user_id, file_uuid, file_version_id)
+        select #{newTableId} table_id,
+               `key`,
+               title,
+               data_index,
+               field_type,
+               `options`,
+               `unit`,
+               `order`,
+               default_value,
+               required,
+               visible,
+               kind,
+               formula,
+               match_type,
+               match_db_id,
+               match_folder_id,
+               #{userId}     create_user_id,
+               file_uuid,
+               file_version_id
+        from hf_dm_content_columns
+        where table_id = #{tableId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </insert>
+
+    <insert id="copyDmDataDao">
+        insert into hf_dm_data
+            (data_id, data_content, table_id, `order`, create_user_id)
+        select data_id,
+               data_content,
+               #{newTableId} table_id,
+               `order`,
+               #{userId}     create_user_id
+        from hf_dm_data
+        where table_id = #{tableId}
+    </insert>
+
+    <insert id="copyDmViewDao">
+        insert into hf_dm_table
+        (table_id, table_name, table_desc, show_pagination, ellipsis, db_id, create_user_id, is_del, father_table_id,
+         father_filter, father_group)
+        select #{newViewId}  table_id,
+               table_name,
+               table_desc,
+               show_pagination,
+               ellipsis,
+               #{dbId}       db_id,
+               #{userId}     create_user_id,
+               '0'           is_del,
+               #{newTableId} father_table_id,
+               father_filter,
+               father_group
+        from hf_dm_table
+        where table_id = #{viewId}
+    </insert>
+    <insert id="copyDmViewInFileDao">
+        insert into hf_dm_content_table
+        (table_id, table_name, table_desc, show_pagination, ellipsis, db_id,`order`, create_user_id, is_del, file_uuid,
+         file_version_id, father_table_id, father_filter, father_group, source_table_id)
+        select #{newViewId}  table_id,
+               table_name,
+               table_desc,
+               show_pagination,
+               ellipsis,
+               #{dbId}       db_id,
+               `order`,
+               #{userId}     create_user_id,
+               '0'           is_del,
+               file_uuid,
+               file_version_id,
+               #{newTableId} father_table_id,
+               father_filter,
+               father_group,
+               source_table_id
+        from hf_dm_content_table
+        where table_id = #{viewId}
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+    </insert>
+
+    <insert id="createTeachVideoDao">
+        insert into hf_teach_video
+            (video_id, video_url, title, description, create_user_id)
+        values (#{videoId}, #{videoUrl}, #{title}, #{description}, #{createUserId})
+    </insert>
+
+    <delete id="delTeachVideoDao">
+        update hf_teach_video
+        set is_del = '1'
+        where video_id = #{videoId}
+    </delete>
+
+    <update id="updateTeachVideoDao">
+        update hf_teach_video
+        set create_time = create_time
+        <if test="videoUrl">
+            ,video_url = #{videoUrl}
+        </if>
+        <if test="title">
+            ,title = #{title}
+        </if>
+        <if test="description">
+            ,description = #{description}
+        </if>
+        where video_id = #{videoId}
+    </update>
+
+    <select id="getTeachVideoInfoDao" resultType="cn.nebulaedata.pojo.HfTeachVideoPojo">
+        select *
+        from hf_teach_video
+        where video_id = #{videoId}
+          and is_del = '0'
+    </select>
+
+    <select id="getTeachVideoListDao" resultType="cn.nebulaedata.pojo.HfTeachVideoPojo">
+        select *
+        from hf_teach_video ta
+        where 1=1
+        <if test="paramNameLike != null">
+            and (ta.title like '%${paramNameLike}%' or ta.description like '%${paramNameLike}%')
+        </if>
+        and is_del = '0'
+    </select>
+
+    <update id="likeTeachVideoDao">
+        update hf_teach_video
+        set `like` = `like` + 1
+        where video_id = #{videoId}
+    </update>
+
+    <update id="dislikeTeachVideoDao">
+        update hf_teach_video
+        set `dislike` = `dislike` + 1
+        where video_id = #{videoId}
+    </update>
+
+    <select id="tableLeftJoinDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        <!--        select JSON_UNQUOTE(JSON_MERGE_PATCH(ta.data_content,IFNULL(tb.data_content,'{}'))) as data_content-->
+        select ta.data_content dataContentLeft,tb.data_content dataContentRight
+        from (
+        select data_content,`order` ${leftSql}
+        from hf_dm_data
+        where table_id = #{leftTableId}
+        ) ta
+        left join (
+        select data_content ${rightSql}
+        from hf_dm_data
+        where table_id = #{rightTableId}
+        ) tb
+        on ${onSql}
+        order by cast(ta.`order` as signed) asc
+    </select>
+
+    <select id="checkUniqueSqlDao" resultType="Integer">
+        select count(1)
+        from hf_dm_data
+        where table_id = #{rightTableId}
+        <foreach collection="checkUniqueSqlList" separator=" " item="item">
+            and ${item} is not null
+        </foreach>
+        group by
+        <foreach collection="checkUniqueSqlList" separator=" ," item="item">
+            ${item}
+        </foreach>
+        order by count(1) desc
+        limit 1
+    </select>
+
+    <select id="getColumnsListDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select *
+        from hf_dm_columns
+        where table_id = #{tableId}
+        and `key` in (
+        <foreach collection="columnsIdList" separator=" ," item="item">
+            #{item}
+        </foreach>
+        )
+    </select>
+    <select id="getColumnsListInFileDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select *
+        from hf_dm_content_columns
+        where table_id = #{tableId}
+        and `key` in (
+        <foreach collection="columnsIdList" separator=" ," item="item">
+            #{item}
+        </foreach>
+        )
+        and file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </select>
+
+    <select id="getDmDataListByTableIdDao" resultType="cn.nebulaedata.pojo.HfDmData">
+        select table_id,data_id,data_content
+        from hf_dm_data
+        where table_id = #{tableId}
+        <if test="dataId != null">
+            and data_id = #{dataId}
+        </if>
+        order by cast(`order` as signed )
+    </select>
+    <!--    <select id="getDmDataListByTableIdInFileDao" resultType="cn.nebulaedata.pojo.HfDmData">-->
+    <!--        select table_id,data_id,data_content,match_result-->
+    <!--        from hf_dm_content_data-->
+    <!--        where table_id = #{tableId}-->
+    <!--        and file_uuid = #{fileUuid}-->
+    <!--        and file_version_id = #{fileVersionId}-->
+    <!--        <if test="dataId != null">-->
+    <!--            and data_id = #{dataId}-->
+    <!--        </if>-->
+    <!--        order by cast(`order` as signed )-->
+    <!--    </select>-->
+
+    <select id="getDmTableListByDbIdDao" resultType="cn.nebulaedata.pojo.HfDmTable">
+        select *
+        from hf_dm_table
+        where db_id = #{dbId}
+          and is_del = '0'
+        order by create_time desc
+    </select>
+    <select id="getDmTableListLVByDbIdDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select table_id value, table_name label
+        from hf_dm_table
+        where db_id = #{dbId}
+          and is_del = '0'
+        order by cast(`order` as signed),create_time desc
+    </select>
+    <select id="getDmTableListLVByDbIdInFileDao" resultType="cn.nebulaedata.pojo.LabelValuePojo">
+        select table_id value, table_name label
+        from hf_dm_content_table
+        where db_id = #{dbId}
+          and is_del = '0'
+          and file_uuid = #{fileUuid}
+          and file_version_id = #{fileVersionId}
+        order by cast(`order` as signed),create_time desc
+    </select>
+
+    <select id="getRelationDmTableDao" resultType="cn.nebulaedata.pojo.HfDmTable">
+        select table_id,table_name
+        from hf_dm_table
+        where db_id = #{dbId}
+        and table_name in
+        (
+        <foreach collection="titleList" separator=" , " item="item">
+            #{item}
+        </foreach>
+        )
+        and is_del = '0'
+        order by cast(`order` as signed),create_time desc
+    </select>
+
+    <select id="getDmSourceTableIdDistinctDao" resultType="String">
+        select distinct source_table_id
+        from hf_dm_content_table
+        where db_id = #{dbId}
+          and is_del = '0'
+    </select>
+
+    <select id="getDmTableMatchColumnsListDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select ta.*
+        from hf_dm_columns ta
+        where table_id = #{tableId}
+          and match_type IS NOT NULL
+          and field_type = '40'
+        order by cast(`order` as signed) asc, create_time desc
+    </select>
+
+
+    <select id="getDmTableAllDataDao" resultType="String">
+        select data_content
+        from hf_dm_data
+        where table_id = #{tableId}
+    </select>
+
+
+    <select id="getImportTableIdListDao" resultType="String">
+        select table_id
+        from hf_dm_content_table
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+--         and source_table_id is not null
+    </select>
+
+    <select id="getImportTableMatchColumnsDao" resultType="cn.nebulaedata.pojo.HfDmColumns">
+        select *
+        from hf_dm_content_columns
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+        and match_type = 'file'
+        and field_type = '40'
+        and table_id in
+        (
+        <foreach collection="importTableIdList" separator=" , " item="tableId">
+            #{tableId}
+        </foreach>
+        )
+    </select>
+
+    <insert id="uploadModelFileDao">
+        insert into hf_upload_model_file
+        (upload_uuid,file_uuid,file_name,extension,folder_id,file_path,create_user_id)
+        values
+        (#{uploadUuid},#{fileUuid},#{fileName},#{extension},#{folderId},#{filePath},#{createUserId})
+    </insert>
+
+    <select id="getDownloadingCntDao" resultType="Integer">
+        select count(1)
+        from hf_my_download
+        where ffid = #{ffid}
+        and file_status = '正在下载'
+    </select>
+
+    <select id="getLibraryFileInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select t1.*,t2.file_version_name,t2.version_info,t3.file_name
+        from hf_file_library t1
+                 left join docframe_file_version_index t2
+                           on t1.file_uuid = t2.file_uuid
+                               and t1.file_version_id = t2.file_version_id
+                 left join docframe_file_index t3
+                           on t1.file_uuid = t3.file_uuid
+        where t1.file_uuid = #{fileUuid}
+          and t1.file_version_id = #{fileVersionId}
+    </select>
+</mapper>
+

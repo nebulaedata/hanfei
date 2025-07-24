@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nebulaedata.dao.FileIndexMapper">
+
+    <insert id="insertFileIndexDao">
+        INSERT INTO docframe_file_index
+        (file_uuid, create_user_id, create_time, update_user_id, file_name, file_type_id, file_version_id,
+        file_parent_id, is_root_file, file_status, ancestors_file_uuid,file_class,file_type_name,file_label_list,include_user_list,main_file_uuid,main_file_version_id,template_type_id,folder_id)
+        VALUES (#{fileUuid}, #{createUserId}, #{createTime}, #{updateUserId}, #{fileName}, #{fileTypeId},
+        #{fileVersionId}, #{fileParentId}, #{isRootFile}, #{fileStatus}, #{ancestorsFileUuid}, #{fileClass}, #{fileTypeName},#{fileLabelList},#{includeUserList},#{mainFileUuid},#{mainFileVersionId},#{templateTypeId},#{folderId})
+    </insert>
+
+    <insert id="insertOutlineDao">
+        INSERT INTO hf_model_outline
+        (outline_id, outline_text, file_uuid, file_version_id, outline_father_id, outline_order, outline_level,
+        outline_property, create_time, create_user_id, update_user_id)
+        VALUES ${sql}
+    </insert>
+
+    <insert id="insertContentDao">
+        INSERT INTO hf_model_content
+        (content_id, content_text,outline_id, file_uuid, file_version_id, create_time)
+        VALUES ${sql}
+    </insert>
+
+    <delete id="deleteFileIndexDao">
+        delete
+        from docframe_file_index
+        where file_uuid = #{fileUuid}
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+    </delete>
+
+    <select id="selectFileIndexDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select * from docframe_file_index where file_uuid in (
+        <foreach collection="items" item="item" separator=",">
+            #{item}
+        </foreach>
+        )
+    </select>
+
+    <select id="selectFileIndexSingleDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select *
+        from docframe_file_index
+        where file_uuid = #{fileUuid}
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+    </select>
+
+    <resultMap id="selectFileIndexSingleIncVerInfoMap" type="cn.nebulaedata.pojo.DocFileIndexPojo">
+        <result column="file_uuid" property="fileUuid"></result>
+        <result column="create_user_id" property="createUserId"></result>
+        <result column="create_time" property="createTime"></result>
+        <result column="update_user_id" property="updateUserId"></result>
+        <result column="update_time" property="updateTime"></result>
+        <result column="file_name" property="fileName"></result>
+        <result column="file_type_id" property="fileTypeId"></result>
+        <result column="file_version_id" property="fileVersionId"></result>
+        <result column="file_parent_id" property="fileParentId"></result>
+        <result column="is_root_file" property="isRootFile"></result>
+        <result column="file_status" property="fileStatus"></result>
+        <result column="file_use_scene_id" property="fileUseSceneId"></result>
+        <result column="file_use_range_id" property="fileUseRangeId"></result>
+        <result column="file_label_id" property="fileLabelId"></result>
+        <result column="ancestors_file_uuid" property="ancestorsFileUuid"></result>
+        <collection property="versions" column="{fileUuid=file_uuid,fileVersionId=file_version_id}"
+                    javaType="cn.nebulaedata.pojo.DocFileVerIndexPojo"
+                    select="selectFileIndexSingleIncVerInfoVersionDao"></collection>
+    </resultMap>
+
+    <select id="selectFileIndexSingleIncVerInfoDao" resultMap="selectFileIndexSingleIncVerInfoMap">
+        select *
+        from docframe_file_index
+        where file_uuid = #{fileUuid}
+        and main_file_uuid is null
+        and main_file_uuid2 is null
+    </select>
+
+    <select id="selectFileIndexSingleIncVerInfoVersionDao"
+            resultType="cn.nebulaedata.pojo.DocFileVerIndexPojo">
+        select *
+        from docframe_file_version_index
+        where file_uuid = #{fileUuid}
+        and file_version_id = #{fileVersionId}
+    </select>
+
+    <insert id="insertFileVersionDao">
+        INSERT INTO docframe_file_version_index
+        (file_uuid, file_version_id, file_version_name, create_time, file_version_desc, parents_version_id,
+        is_root_version, create_user_id, update_user_id, is_draft, version_status)
+        VALUES (#{fileUuid}, #{fileVersionId}, #{fileVersionName}, #{createTime}, #{fileVersionDesc},
+        #{parentsVersionId}, #{isRootVersion}, #{createUserId}, #{updateUserId}, #{isDraft}, #{versionStatus})
+    </insert>
+
+    <delete id="deleteFileVersionDao">
+        delete
+        from docframe_file_version_index
+        where file_version_id = #{fileVersionId}
+    </delete>
+
+    <select id="selectFileVersionDao" resultType="cn.nebulaedata.pojo.DocFileVerIndexPojo">
+        select *
+        from docframe_file_version_index
+    </select>
+
+
+
+    <select id="selectFileSearchDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select
+        t1.*,t4.collect_num
+        from docframe_file_index t1
+        left join (select file_uuid, count(*) as collect_num from docframe_doc_collection group by file_uuid) t4
+        on t1.file_uuid = t4.file_uuid
+        where  main_file_uuid is null
+        where  main_file_uuid2 is null
+        and (1!=1
+        <foreach collection="lists" item="list" separator=" ">
+            or (t1.file_name like '%${list}%')
+        </foreach>
+        )
+        order by t1.update_time desc
+    </select>
+
+
+    <select id="selectFileIndexDetailDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select t1.*, IFNULL(t2.collect_num, 0) as collect_num
+        from docframe_file_index t1
+        left join (select file_uuid, count(*) as collect_num
+        from docframe_doc_collection
+        group by file_uuid) t2
+        on t1.file_uuid = t2.file_uuid
+        where t1.file_type_id = #{fileTypeId}
+        and file_status = '1'
+        and t1.main_file_uuid is null
+        and t1.main_file_uuid2 is null
+        order by collect_num desc, t1.update_time desc limit 10
+    </select>
+
+<!--    <select id="selectMyDocumentDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">-->
+<!--        select t1.file_uuid,-->
+<!--        t1.create_user_id,-->
+<!--        t1.create_time,-->
+<!--        t1.update_user_id,-->
+<!--        t1.update_time,-->
+<!--        t1.file_name,-->
+<!--        t1.file_type_id,-->
+<!--        t4.file_version_id,-->
+<!--        t1.file_parent_id,-->
+<!--        t1.is_root_file,-->
+<!--        t1.file_status,-->
+<!--        &lt;!&ndash;        t1.file_use_scene_id,&ndash;&gt;-->
+<!--        &lt;!&ndash;        t1.file_use_range_id,&ndash;&gt;-->
+<!--        &lt;!&ndash;        t1.file_label_id,&ndash;&gt;-->
+<!--        t1.ancestors_file_uuid,-->
+<!--        t2.user_name as create_user_name,-->
+<!--        t3.user_name as update_user_name,-->
+<!--        t4.file_version_name,-->
+<!--        t4.is_draft,-->
+<!--        t4.version_status-->
+<!--        from docframe_file_index t1-->
+<!--        left join docframe_user t2 on t1.create_user_id = t2.user_id-->
+<!--        left join docframe_user t3 on t1.update_user_id = t3.user_id-->
+<!--        left join docframe_file_version_index t4-->
+<!--        on t1.file_uuid = t4.file_uuid-->
+<!--        where (t1.create_user_id = #{userId}-->
+<!--        or t1.update_user_id = #{userId}-->
+<!--        or t4.create_user_id = #{userId}-->
+<!--        or t4.update_user_id = #{userId})-->
+<!--        and t4.version_status in ('正式版本','草稿','审核中')-->
+<!--        and t1.main_file_uuid is null-->
+<!--        and t1.main_file_uuid2 is null-->
+<!--        <if test="searchLike != null">-->
+<!--            and t1.file_name like '%${searchLike}%'-->
+<!--        </if>-->
+<!--        order by case when t4.version_status='正式版本' then 2 else 1 end,t4.update_time desc,t1.file_name-->
+<!--    </select>-->
+
+
+
+    <update id="updateFileIndexStatusDao">
+        UPDATE docframe_file_index
+        SET file_status = #{fileStatus}
+        WHERE file_uuid = #{fileUuid}
+    </update>
+
+<!--    <select id="selectHotSearchDao" resultType="java.lang.String">-->
+<!--        select search_content from docframe_search_log-->
+<!--        group by search_content-->
+<!--        order by count(*) desc,max(create_time) desc-->
+<!--        <if test="num != null">-->
+<!--            limit #{num}-->
+<!--        </if>-->
+<!--    </select>-->
+
+<!--    <select id="selectHotFileDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">-->
+<!--        select t2.*, t1.collect_num-->
+<!--        from (select file_uuid, count(*) as collect_num-->
+<!--        from docframe_doc_collection-->
+<!--        group by file_uuid-->
+<!--        order by count(*) desc limit 10) t1-->
+<!--        left join docframe_file_index t2 on t1.file_uuid = t2.file_uuid-->
+<!--        where t2.file_status = '1'-->
+<!--    </select>-->
+
+<!--    <select id="selectHotClickFileDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">-->
+<!--        select t2.*-->
+<!--        from (select file_uuid, count(*) as collect_num-->
+<!--        from docframe_file_click_log-->
+<!--        group by file_uuid-->
+<!--        order by count(*) desc limit 10) t1-->
+<!--        left join docframe_file_index t2 on t1.file_uuid = t2.file_uuid-->
+<!--    </select>-->
+
+<!--    <select id="selectGoodTaggingDao" resultType="cn.nebulaedata.pojo.DocTaggingPojo">-->
+<!--        select t1.*, t2.file_name, t3.file_version_name, t4.tips_name, t4.tips_desc, t5.user_name, t6.org_id ,-->
+<!--        t6.org_name-->
+<!--        from docframe_tagging t1-->
+<!--        left join docframe_file_index t2 on t1.file_uuid = t2.file_uuid-->
+<!--        left join docframe_file_version_index t3-->
+<!--        on t2.file_uuid = t3.file_uuid and t2.file_version_id = t3.file_version_id-->
+<!--        left join docframe_tips t4 on t1.tips_uuid = t4.tips_uuid-->
+<!--        left join docframe_user t5 on t1.user_id = t5.user_id-->
+<!--        left join docframe_organization t6 on t5.org_id = t6.org_id-->
+<!--        where t1.paragraph_interpretation is not null-->
+<!--        and t1.paragraph_interpretation != ''-->
+<!--        order by t1.update_time desc limit 5-->
+<!--    </select>-->
+
+<!--    <select id="selectTaggingNumDao" resultType="cn.nebulaedata.pojo.DocTaggingPojo">-->
+<!--        select file_paragraph_id, count(*) as tag_num-->
+<!--        from docframe_tagging-->
+<!--        where file_uuid = #{fileUuid}-->
+<!--        and file_version_id = #{fileVersionId}-->
+<!--        group by file_paragraph_id-->
+<!--    </select>-->
+
+    <select id="selectSingleFileDetailInfoDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">
+        select t1.*,
+        t2.user_name as create_user_name,
+        t3.user_name as update_user_name,
+        t4.file_version_name,
+        t4.is_draft,
+        t4.version_status
+        from docframe_file_index t1
+        left join docframe_user t2 on t1.create_user_id = t2.user_id
+        left join docframe_user t3 on t1.update_user_id = t3.user_id
+        left join docframe_file_version_index t4
+        on t1.file_uuid = t4.file_uuid
+        where t1.file_uuid = #{fileUuid}
+        and t1.main_file_uuid is null
+        and t1.main_file_uuid2 is null
+        and t4.file_version_id = #{fileVersionId}
+    </select>
+
+<!--    <insert id="insertFileTaggingDao">-->
+<!--        INSERT INTO docframe_tagging-->
+<!--        (file_uuid, file_version_id, file_paragraph_id, file_paragraph_content, tips_uuid, paragraph_interpretation,-->
+<!--        user_id, create_time)-->
+<!--        VALUES (#{fileUuid}, #{fileVersionId}, #{fileParagraphId}, #{fileParagraphContent}, #{tipsUuid},-->
+<!--        #{paragraphInterpretation}, #{userId}, #{createTime});-->
+<!--    </insert>-->
+
+<!--    <select id="selectTaggingInfoDao" resultType="cn.nebulaedata.pojo.DocTaggingPojo">-->
+<!--        select t1.*, t2.file_name, t3.file_version_name, t4.tips_name, t4.tips_desc, t5.user_name-->
+<!--        from docframe_tagging t1-->
+<!--        left join docframe_file_index t2 on t1.file_uuid = t2.file_uuid-->
+<!--        left join docframe_file_version_index t3-->
+<!--        on t2.file_uuid = t3.file_uuid and t2.file_version_id = t3.file_version_id-->
+<!--        left join docframe_tips t4 on t1.tips_uuid = t4.tips_uuid-->
+<!--        left join docframe_user t5 on t1.user_id = t5.user_id-->
+<!--        where t1.file_paragraph_id = #{fileParagraphId} and t1.file_uuid = #{fileUuid} and t1.file_version_id =-->
+<!--        #{fileVersionId}-->
+<!--    </select>-->
+
+<!--    <select id="selectTaggingHisDao" resultType="cn.nebulaedata.pojo.DocTaggingPojo">-->
+<!--        select t1.*, t2.file_name, t3.file_version_name, t4.tips_name, t4.tips_desc, t5.user_name-->
+<!--        from docframe_tagging_his t1-->
+<!--        left join docframe_file_index t2 on t1.file_uuid = t2.file_uuid-->
+<!--        left join docframe_file_version_index t3-->
+<!--        on t2.file_uuid = t3.file_uuid and t2.file_version_id = t3.file_version_id-->
+<!--        left join docframe_tips t4 on t1.tips_uuid = t4.tips_uuid-->
+<!--        left join docframe_user t5 on t1.user_id = t5.user_id-->
+<!--        where t1.file_paragraph_id = #{fileParagraphId} and t1.file_uuid = #{fileUuid} and t1.file_version_id =-->
+<!--        #{fileVersionId}-->
+<!--        order by t1.update_time desc-->
+<!--    </select>-->
+
+<!--    <delete id="deleteTaggingRecoDao">-->
+<!--        delete from docframe_tagging where file_uuid=#{fileUuid} and file_version_id=#{fileVersionId} and-->
+<!--        file_paragraph_id=#{fileParagraphId}-->
+<!--    </delete>-->
+
+    <select id="selectDocStrDao" resultType="java.lang.String">
+        select file_text from docframe_doc_structure where file_uuid=#{fileUuid} and file_version_id = #{fileVersionId}
+    </select>
+
+<!--    <select id="getHomePageDocumentListDao" resultType="cn.nebulaedata.pojo.DocFileIndexPojo">-->
+<!--        select *-->
+<!--        from docframe_file_index-->
+<!--        where main_file_uuid is null-->
+<!--        where main_file_uuid2 is null-->
+<!--        order by update_time desc-->
+<!--        limit 15-->
+<!--    </select>-->
+</mapper>

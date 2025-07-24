@@ -1,0 +1,122 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/hf_db_prod?characterEncoding=UTF-8&useSSL=false&serverTimezone=CTT&allowMultiQueries=true
+    username: root
+    password: 123456
+    druid:
+      validation-query: select 1
+  redis:
+    host: 127.0.0.1
+    password: 123456
+    port: 6379
+    pool:
+      max: 8
+    jedis:
+      pool:
+        max-wait:
+        max-idle: 8
+        min-idle: 0
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  rabbitmq:
+    addresses: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
+  servlet:
+    multipart:
+      max-file-size: 5000MB
+      max-request-size: 5000MB
+  main:
+    allow-bean-definition-overriding: true
+  data:
+    neo4j:
+      uri: bolt://127.0.0.1:7687
+      username: neo4j
+      password: neo4j
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+  #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.yinww.demo.springboot2.demo006.domain
+logging:
+  pattern:
+    console: "[%thread] %-5level %logger{36} - %msg%n"
+server:
+  port: 9999
+  servlet:
+    session:
+      timeout: 3600
+flowable:
+  async-executor-activate: false
+doc-frame-service:
+  env-name: prod
+  # 域名
+  host-name: han
+  # 路径注意大小写
+  upload-path: /application/hf/resource/doc
+  #  download-path: D:\file\download\
+  file-pdf-save-path: /application/hf/resource/pdf
+
+  #  项目路径
+  project-file-path: /application/hf/resource/projectFile
+  #  上传文件解析暂存路径
+  doc2html-path: /application/hf/resource/html
+  #  上传文件解析暂存路径
+  docUnzip-path: /application/hf/resource/unzip
+  #  公司信息路径
+  company-path: /application/hf/resource/company
+  #  头像路径
+  headImg-path: /application/hf/resource/headImg
+  #  文章内图片存放路径
+  pic-path: /application/hf/resource/docImg
+  #  静态资源访问的地址
+  static-resource-path: http://han.nebulaedata.cn
+  #  参数资源存放路径
+  annex-path: /application/hf/resource/annex
+  #  段落对比路径
+  compare-path: /application/hf/resource/compare
+  compare-path-local: /application/hf/resource/compare
+  #  文档下载路径
+  download-path: /application/hf/resource/download
+  #  批次文件路径
+  batch-file-path: /application/hf/resource/batchFile
+  #  工具系统同步文件路径
+  upload-json-path: /application/hf/resource/upload_json_path
+  #  数据管理-上传excel文件
+  upload-dm-data-path: /application/hf/resource/upload_dm_excel_path
+  #  上传视频教程文件
+  teach-video-path: /application/hf/resource/upload_video_path
+  #  pdflicense
+  pdf-license-path: /application/hf/resource/license/License.xml
+  #  上传模板
+  upload-model-path: /application/hf/resource/upload_model_path
+
+# 外部端口调用
+do-post:
+  dfb-url: http://dfb.nebulaedata.cn
+
+# 分库分表
+split-database:
+  # 存储文内数据管理的data  (拆分hf_dm_content_data)
+  dm-content-data: hf_db_prod_dmdata
+
+# 登录加密
+
+
+# 接口加密传输
+aes:
+  # 秘钥
+  key: fK8hG2b3EerdWvh6
+  # 是否开启request解密
+  request-decrypt: true
+  # 是否开启response加密
+  response-encrypt: true
+
+# protocol 协议
+protocol:
+  http: http

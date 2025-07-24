@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.nebulaedata.dao.UserMapper">
+
+    <select id="checkUserLoginDao" resultType="cn.nebulaedata.pojo.DocUserPojo">
+        select t1.head_img_path avatar,t1.*,tc.roles_name
+        from docframe_user t1
+        left join docframe_user_roles tc
+        on t1.roles_id = tc.roles_id
+        where (t1.user_phone = #{loginId} or t1.user_name = #{loginId})
+        and user_password = #{loginPassword}
+        and user_status = '1'
+        limit 1
+    </select>
+
+    <select id="checkUserExistDao" resultType="Integer">
+        select count(1)
+        from docframe_user t1
+        where (t1.user_phone = #{loginId} or t1.user_name = #{loginId})
+        and user_status = '1'
+    </select>
+    <select id="checkPhoneNumberExistDao" resultType="Integer">
+        select count(1)
+        from docframe_user t1
+        where t1.user_phone = #{loginId}
+        and user_status = '1'
+    </select>
+
+    <select id="getUserInfoDao" resultType="cn.nebulaedata.pojo.DocUserPojo">
+        select ta.head_img_path avatar ,ta.*,tb.company_name companyName,tc.roles_name
+        from docframe_user ta
+        left join hf_company_data tb
+        on ta.company_id=tb.company_id
+        left join docframe_user_roles tc
+        on ta.roles_id = tc.roles_id
+        where user_id = #{userId}
+    </select>
+    
+    <select id="checkUserPermissionDao" resultType="Integer">
+        select count(1)
+        from docframe_user ta
+        left join docframe_user_roles tb
+        on ta.roles_id = tb.roles_id
+        left join docframe_roles_to_menu tc
+        on tb.roles_id = tc.roles_id
+        where ta.user_id = #{userId}
+        and tc.menu_id = #{menuId}
+    </select>
+
+    <select id="getUserInfoByPhoneNumberDao" resultType="cn.nebulaedata.pojo.DocUserPojo">
+        select ta.head_img_path avatar ,ta.*,tb.company_name companyName,tc.roles_name
+        from docframe_user ta
+        left join hf_company_data tb
+        on ta.company_id=tb.company_id
+        left join docframe_user_roles tc
+        on ta.roles_id = tc.roles_id
+        where user_phone = #{PhoneNumber}
+    </select>
+
+    <update id="updateUserInfoDao">
+        update docframe_user
+        set create_time = create_time
+        <if test="userPhone != null">
+            ,user_phone = #{userPhone}
+        </if>
+        <if test="userName != null">
+            ,user_name = #{userName}
+        </if>
+        <if test="headImgPath != null">
+            ,head_img_path = #{headImgPath}
+        </if>
+        where user_id = #{userId}
+    </update>
+
+    <select id="getHfConfigDao" resultType="cn.nebulaedata.pojo.HfConfig">
+        select *
+        from hf_config
+        where id = #{id}
+    </select>
+
+    <update id="updatePasswdDao">
+        update docframe_user
+        set user_password = #{userPassword}
+        where user_id = #{userId}
+    </update>
+</mapper>
